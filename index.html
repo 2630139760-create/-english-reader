@@ -30,16 +30,32 @@
 
         <form id="articleForm" class="editor-card" novalidate>
           <div class="field field-title">
-            <label for="articleTitle">文章标题</label>
+            <label for="articleTitle">学习单元标题</label>
             <input
               id="articleTitle"
               name="articleTitle"
+              type="text"
+              placeholder="例如：阅读与生活"
+              autocomplete="off"
+              required
+            />
+            <p class="field-error" id="titleError" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label for="originalTitle">原文英文标题</label>
+              <span>必填</span>
+            </div>
+            <input
+              id="originalTitle"
+              name="originalTitle"
               type="text"
               placeholder="例如：The Joy of Reading"
               autocomplete="off"
               required
             />
-            <p class="field-error" id="titleError" aria-live="polite"></p>
+            <p class="field-error" id="originalTitleError" aria-live="polite"></p>
           </div>
 
           <div class="field">
@@ -60,6 +76,20 @@
 
           <div class="field">
             <div class="label-row">
+              <label for="chineseTitle">原文中文标题</label>
+              <span>选填</span>
+            </div>
+            <input
+              id="chineseTitle"
+              name="chineseTitle"
+              type="text"
+              placeholder="例如：阅读的乐趣"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="field">
+            <div class="label-row">
               <label for="chineseText">中文全文翻译</label>
               <span>选填</span>
             </div>
@@ -70,6 +100,31 @@
               placeholder="可以在这里粘贴中文翻译，阅读时按需展开。"
             ></textarea>
           </div>
+
+          <details class="import-panel">
+            <summary>从 ChatGPT 导入场景内容</summary>
+            <div class="import-panel-body">
+              <p class="format-help">
+                请粘贴 JSON：包含 <code>articleTitle</code>、<code>original</code>，以及 1～5 项
+                <code>scenes</code>。每篇内容必须包含英文标题 <code>title</code> 和英文正文
+                <code>english</code>；<code>chineseTitle</code> 与 <code>chinese</code> 可以为空。
+                导入只保存在本设备，不会连接任何 API。
+              </p>
+              <label class="visually-hidden" for="importText">场景内容 JSON</label>
+              <textarea
+                id="importText"
+                rows="12"
+                placeholder='{"articleTitle":"学习单元标题","original":{"title":"Original title","english":"Original text","chineseTitle":"","chinese":""},"scenes":[{"title":"Scene 1","english":"Scene text","chineseTitle":"","chinese":""}]}'
+                spellcheck="false"
+              ></textarea>
+              <p id="importStatus" class="import-status" role="status" aria-live="polite"></p>
+              <p id="sceneSummary" class="scene-summary">当前没有场景文章</p>
+              <div class="import-actions">
+                <button id="importButton" class="primary-button" type="button">导入内容</button>
+                <button id="clearImportButton" class="secondary-button" type="button">清空输入</button>
+              </div>
+            </div>
+          </details>
 
           <div class="form-footer">
             <p><span class="save-dot" aria-hidden="true"></span>内容会自动保存在此设备</p>
@@ -110,9 +165,11 @@
           <p id="vocabularyEmpty" class="vocabulary-empty">点击文章中的英文单词，把它加入这里。</p>
         </section>
 
+        <div id="articleTabs" class="article-tabs" role="tablist" aria-label="切换阅读内容"></div>
+
         <article class="article-card">
           <header class="article-header">
-            <p class="eyebrow">ENGLISH ARTICLE</p>
+            <p id="readerUnitTitle" class="eyebrow"></p>
             <h1 id="readerTitle"></h1>
             <div class="title-rule" aria-hidden="true"></div>
           </header>
@@ -130,7 +187,10 @@
               <span id="translationToggleText">展开全文翻译</span>
               <span class="chevron" aria-hidden="true">⌄</span>
             </button>
-            <div id="readerTranslation" class="translation-body" lang="zh-CN" hidden></div>
+            <div id="readerTranslation" class="translation-body" lang="zh-CN" hidden>
+              <h2 id="readerChineseTitle" class="translation-title"></h2>
+              <div id="readerChineseText"></div>
+            </div>
           </div>
         </article>
       </section>
