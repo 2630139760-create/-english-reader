@@ -416,7 +416,8 @@ textarea:focus {
 }
 
 .word-token:hover,
-.word-token:focus-visible {
+.word-token:focus-visible,
+.word-token.is-selected {
   color: var(--blue);
   background: var(--blue-soft);
   outline: 2px solid transparent;

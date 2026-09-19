@@ -31,11 +31,13 @@ const wordMeaning = document.querySelector("#wordMeaning");
 const wordPhonetic = document.querySelector("#wordPhonetic");
 const wordExample = document.querySelector("#wordExample");
 const wordCardStatus = document.querySelector("#wordCardStatus");
+const wordCardSubmit = document.querySelector("#wordCardSubmit");
 const speakWord = document.querySelector("#speakWord");
 const deleteWord = document.querySelector("#deleteWord");
 
 let vocabulary = {};
 let activeWord = "";
+let activeDisplayWord = "";
 let cardTrigger = null;
 
 function getDraft() {
@@ -114,15 +116,23 @@ function renderVocabulary() {
   });
 }
 
-function openWordCard(word, trigger) {
+function clearTemporarySelection() {
+  readerEnglish.querySelectorAll(".word-token.is-selected").forEach((token) => {
+    token.classList.remove("is-selected");
+  });
+}
+
+function openWordCard(word, trigger, displayWord = word) {
   const entry = vocabulary[word];
-  if (!entry) return;
   activeWord = word;
+  activeDisplayWord = entry?.word || displayWord;
   cardTrigger = trigger || document.activeElement;
-  wordCardTitle.textContent = entry.word || word;
-  wordMeaning.value = entry.meaning || "";
-  wordPhonetic.value = entry.phonetic || "";
-  wordExample.value = entry.example || "";
+  wordCardTitle.textContent = activeDisplayWord;
+  wordMeaning.value = entry?.meaning || "";
+  wordPhonetic.value = entry?.phonetic || "";
+  wordExample.value = entry?.example || "";
+  wordCardSubmit.textContent = entry ? "保存修改" : "加入生词表";
+  deleteWord.hidden = !entry;
   wordCardStatus.textContent = "";
   wordCard.hidden = false;
   wordCardBackdrop.hidden = false;
@@ -132,21 +142,14 @@ function openWordCard(word, trigger) {
 
 function closeWordCard() {
   if (wordCard.hidden) return;
+  clearTemporarySelection();
   wordCard.hidden = true;
   wordCardBackdrop.hidden = true;
   document.body.style.overflow = "";
   if (cardTrigger && document.contains(cardTrigger)) cardTrigger.focus();
   activeWord = "";
+  activeDisplayWord = "";
   cardTrigger = null;
-}
-
-function collectWord(word, displayWord, trigger) {
-  if (!vocabulary[word]) {
-    vocabulary[word] = { word: displayWord.toLocaleLowerCase("en-US"), meaning: "", phonetic: "", example: "" };
-    saveDraft();
-    renderVocabulary();
-  }
-  openWordCard(word, trigger);
 }
 
 function clearValidation(input, errorElement) {
@@ -212,7 +215,9 @@ function showEditor() {
 readerEnglish.addEventListener("click", (event) => {
   const token = event.target.closest(".word-token");
   if (!token) return;
-  collectWord(token.dataset.word, token.textContent, token);
+  clearTemporarySelection();
+  if (!vocabulary[token.dataset.word]) token.classList.add("is-selected");
+  openWordCard(token.dataset.word, token, token.textContent);
 });
 
 vocabularyToggle.addEventListener("click", () => {
@@ -228,16 +233,21 @@ vocabularyItems.addEventListener("click", (event) => {
 
 wordCardForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!activeWord || !vocabulary[activeWord]) return;
+  if (!activeWord) return;
+  const isNewWord = !vocabulary[activeWord];
   vocabulary[activeWord] = {
     ...vocabulary[activeWord],
+    word: activeDisplayWord.toLocaleLowerCase("en-US"),
     meaning: wordMeaning.value.trim(),
     phonetic: wordPhonetic.value.trim(),
     example: wordExample.value.trim(),
   };
   saveDraft();
+  clearTemporarySelection();
   renderVocabulary();
-  wordCardStatus.textContent = "已保存到此设备";
+  wordCardSubmit.textContent = "保存修改";
+  deleteWord.hidden = false;
+  wordCardStatus.textContent = isNewWord ? "已加入生词表并保存到此设备" : "修改已保存到此设备";
 });
 
 deleteWord.addEventListener("click", () => {
@@ -253,7 +263,7 @@ speakWord.addEventListener("click", () => {
     wordCardStatus.textContent = "当前浏览器不支持系统朗读。";
     return;
   }
-  const utterance = new SpeechSynthesisUtterance(vocabulary[activeWord].word || activeWord);
+  const utterance = new SpeechSynthesisUtterance(activeDisplayWord || activeWord);
   utterance.lang = "en-US";
   const voices = window.speechSynthesis.getVoices();
   utterance.voice = voices.find((voice) => voice.lang === "en-US")
