@@ -132,6 +132,18 @@ main {
   line-height: 1.85;
 }
 
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.editor-actions .primary-button,
+.editor-actions .secondary-button {
+  min-height: 44px;
+}
+
 .editor-card,
 .article-card {
   border: 1px solid rgba(218, 225, 235, 0.9);
@@ -350,7 +362,13 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 22px;
+}
+
+.reader-nav > .back-button {
+  flex: 0 0 auto;
 }
 
 .article-tabs {
@@ -387,6 +405,8 @@ textarea:focus {
 .reader-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 18px;
 }
 
@@ -804,6 +824,8 @@ footer {
   .library-panel { inset: 3vh 18px; }
   .library-card { grid-template-columns: repeat(4, 1fr); }
   .library-card > div { grid-column: 1 / -1; }
+
+  .reader-actions { gap: 8px; }
 }
 
 @media (max-width: 540px) {
