@@ -169,7 +169,10 @@
         <section id="vocabularyList" class="vocabulary-list" aria-label="词汇表" hidden>
           <div class="vocabulary-list-header">
             <h2>词汇表</h2>
-            <span id="vocabularySummary">共 0 个</span>
+            <div class="vocabulary-heading-actions"><span id="vocabularySummary">共 0 个</span><button id="startReviewButton" class="primary-button compact-button" type="button" aria-label="开始复习全部文章词汇">开始复习</button></div>
+          </div>
+          <div id="vocabularyStatusFilters" class="vocabulary-filters status-filters" role="group" aria-label="筛选学习状态">
+            <button type="button" data-status="all" aria-pressed="true">全部状态</button><button type="button" data-status="unfamiliar" aria-pressed="false">陌生</button><button type="button" data-status="learning" aria-pressed="false">学习中</button><button type="button" data-status="mastered" aria-pressed="false">已掌握</button>
           </div>
           <div id="vocabularyFilters" class="vocabulary-filters" role="group" aria-label="筛选词汇类型">
             <button type="button" data-filter="all" aria-label="显示全部词汇" aria-pressed="true">全部</button>
@@ -275,7 +278,10 @@
         <button id="articleVocabularyBack" class="back-button" type="button" aria-label="返回文章库">← 返回文章库</button>
         <div class="vocabulary-list-header">
           <h2 id="articleVocabularyTitle"></h2>
-          <span id="articleVocabularySummary"></span>
+          <div class="vocabulary-heading-actions"><span id="articleVocabularySummary"></span><button id="reviewArticleButton" class="primary-button compact-button" type="button" aria-label="复习本篇词汇">复习本篇</button></div>
+        </div>
+        <div id="articleVocabularyStatusFilters" class="vocabulary-filters status-filters" role="group" aria-label="筛选本篇词汇学习状态">
+          <button type="button" data-status="all" aria-pressed="true">全部状态</button><button type="button" data-status="unfamiliar" aria-pressed="false">陌生</button><button type="button" data-status="learning" aria-pressed="false">学习中</button><button type="button" data-status="mastered" aria-pressed="false">已掌握</button>
         </div>
         <div id="articleVocabularyFilters" class="vocabulary-filters" role="group" aria-label="筛选本篇词汇类型">
           <button type="button" data-filter="all" aria-label="显示本篇全部词汇" aria-pressed="true">全部</button>
@@ -286,6 +292,31 @@
         <p id="articleVocabularyEmpty" class="vocabulary-empty">本篇还没有收藏词汇。</p>
       </section>
     </aside>
+
+    <div id="reviewBackdrop" class="word-card-backdrop" hidden></div>
+    <section id="reviewPanel" class="review-panel" role="dialog" aria-modal="true" aria-labelledby="reviewTitle" hidden>
+      <header class="word-card-header"><div><p class="eyebrow">VOCABULARY REVIEW</p><h2 id="reviewTitle">词汇复习</h2></div><button id="reviewClose" class="icon-button" type="button" aria-label="退出复习">×</button></header>
+      <div id="reviewSetup">
+        <p id="reviewScopeLabel" class="review-scope"></p>
+        <div class="review-settings">
+          <fieldset><legend>词汇类型</legend><label><input type="radio" name="reviewType" value="all" checked> 全部</label><label><input type="radio" name="reviewType" value="word"> 单词</label><label><input type="radio" name="reviewType" value="phrase"> 短语</label></fieldset>
+          <fieldset><legend>学习状态</legend><label><input type="radio" name="reviewStatus" value="all" checked> 全部</label><label><input type="radio" name="reviewStatus" value="unfamiliar"> 陌生</label><label><input type="radio" name="reviewStatus" value="learning"> 学习中</label><label><input type="radio" name="reviewStatus" value="mastered"> 已掌握</label></fieldset>
+          <fieldset><legend>复习数量</legend><label><input type="radio" name="reviewLimit" value="10" checked> 10 个</label><label><input type="radio" name="reviewLimit" value="20"> 20 个</label><label><input type="radio" name="reviewLimit" value="all"> 全部</label></fieldset>
+          <fieldset><legend>排序方式</legend><label><input type="radio" name="reviewOrder" value="random" checked> 随机顺序</label><label><input type="radio" name="reviewOrder" value="created"> 收藏顺序</label></fieldset>
+        </div>
+        <p id="reviewMatchCount" class="review-count" role="status"></p><button id="beginReviewButton" class="primary-button" type="button" aria-label="按当前条件开始复习">开始</button>
+      </div>
+      <div id="reviewSession" hidden>
+        <button id="reviewCard" class="review-card" type="button" aria-label="显示答案">
+          <span id="reviewProgress" class="review-progress"></span><span id="reviewTypeBadge" class="type-badge"></span><strong id="reviewWord"></strong>
+          <span id="reviewAnswerHint">点击卡片显示答案</span><span id="reviewAnswer" class="review-answer" hidden></span>
+        </button>
+        <div class="review-actions"><button id="reviewSpeak" class="secondary-button" type="button" aria-label="朗读当前单词或短语">朗读</button><button id="showReviewAnswer" class="primary-button" type="button" aria-label="显示答案">显示答案</button></div>
+        <div id="reviewStatusActions" class="review-status-actions" hidden><button type="button" data-review-result="unfamiliar" aria-label="标记为陌生">陌生</button><button type="button" data-review-result="learning" aria-label="标记为学习中">学习中</button><button type="button" data-review-result="mastered" aria-label="标记为已掌握">已掌握</button></div>
+        <div class="review-navigation"><button id="reviewPrevious" class="secondary-button" type="button" aria-label="上一张复习卡">上一张</button><button id="reviewUndo" class="secondary-button" type="button" aria-label="撤销上一操作" disabled>撤销上一操作</button><button id="reviewNext" class="secondary-button" type="button" aria-label="下一张复习卡">下一张</button><button id="reviewExit" class="delete-button" type="button" aria-label="退出复习并保存进度">退出复习</button></div>
+      </div>
+      <div id="reviewComplete" class="review-complete" hidden><h3>本轮复习完成</h3><div id="reviewSummary"></div><div class="review-complete-actions"><button id="reviewAgain" class="primary-button" type="button" aria-label="再复习一次">再复习一次</button><button id="reviewDifficult" class="secondary-button" type="button" aria-label="只复习本轮陌生与学习中词汇">只复习本轮陌生与学习中词汇</button><button id="reviewReturn" class="secondary-button" type="button" aria-label="返回词汇表">返回词汇表</button></div></div>
+    </section>
 
     <div id="dataBackdrop" class="word-card-backdrop" hidden></div>
     <aside id="dataPanel" class="library-panel data-panel" role="dialog" aria-modal="true" aria-labelledby="dataPanelTitle" hidden>
