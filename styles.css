@@ -132,6 +132,66 @@ main {
   padding: clamp(28px, 4vw, 44px);
 }
 
+.import-panel {
+  margin-bottom: 30px;
+  border: 1px solid #d5e0f1;
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.import-panel summary {
+  padding: 17px 18px;
+  color: var(--blue-dark);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.import-panel-body {
+  padding: 0 18px 20px;
+  border-top: 1px solid #e4eaf3;
+}
+
+.format-note {
+  margin: 15px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.import-panel label {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.import-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.import-actions .primary-button,
+.import-actions .secondary-button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+.import-status {
+  min-height: 18px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.import-status.is-error {
+  color: var(--error);
+}
+
+.import-status.is-success {
+  color: #287044;
+}
+
 .field + .field {
   margin-top: 27px;
 }
@@ -308,6 +368,53 @@ textarea:focus {
   box-shadow: 0 10px 30px rgba(36, 55, 87, 0.05);
 }
 
+.content-switcher-wrap {
+  margin-bottom: 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.reader-unit-title {
+  margin: 0 2px 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.content-switcher {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  gap: 8px;
+  padding: 2px;
+}
+
+.content-tab {
+  min-width: 84px;
+  min-height: 44px;
+  padding: 0 17px;
+  border: 1px solid #d3dcea;
+  border-radius: 999px;
+  color: #59677a;
+  background: white;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.content-tab[aria-selected="true"] {
+  border-color: var(--blue);
+  color: white;
+  background: var(--blue);
+  box-shadow: 0 6px 14px rgba(36, 95, 189, 0.2);
+}
+
+.content-tab:focus-visible {
+  outline: 3px solid rgba(36, 95, 189, 0.2);
+  outline-offset: 2px;
+}
+
 .vocabulary-list-header {
   display: flex;
   align-items: baseline;
@@ -384,6 +491,12 @@ textarea:focus {
   line-height: 1.18;
 }
 
+.article-chinese-title {
+  margin: 18px 0 -8px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
 .title-rule {
   width: 48px;
   height: 3px;
@@ -416,7 +529,8 @@ textarea:focus {
 }
 
 .word-token:hover,
-.word-token:focus-visible {
+.word-token:focus-visible,
+.word-token.is-selected {
   color: var(--blue);
   background: var(--blue-soft);
   outline: 2px solid transparent;
@@ -620,6 +734,11 @@ footer {
   .editor-card {
     padding: 24px 18px;
     border-radius: 14px;
+  }
+
+  .import-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .form-footer {

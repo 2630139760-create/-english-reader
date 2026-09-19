@@ -5,11 +5,21 @@ const editorView = document.querySelector("#editorView");
 const readerView = document.querySelector("#readerView");
 const articleForm = document.querySelector("#articleForm");
 const titleInput = document.querySelector("#articleTitle");
+const originalTitleInput = document.querySelector("#originalTitle");
 const englishInput = document.querySelector("#englishText");
+const chineseTitleInput = document.querySelector("#chineseTitle");
 const chineseInput = document.querySelector("#chineseText");
 const titleError = document.querySelector("#titleError");
+const originalTitleError = document.querySelector("#originalTitleError");
 const englishError = document.querySelector("#englishError");
+const structuredImport = document.querySelector("#structuredImport");
+const importContent = document.querySelector("#importContent");
+const clearImport = document.querySelector("#clearImport");
+const importStatus = document.querySelector("#importStatus");
+const contentSwitcher = document.querySelector("#contentSwitcher");
+const readerUnitTitle = document.querySelector("#readerUnitTitle");
 const readerTitle = document.querySelector("#readerTitle");
+const readerChineseTitle = document.querySelector("#readerChineseTitle");
 const readerEnglish = document.querySelector("#readerEnglish");
 const readerTranslation = document.querySelector("#readerTranslation");
 const translationSection = document.querySelector("#translationSection");
@@ -31,43 +41,61 @@ const wordMeaning = document.querySelector("#wordMeaning");
 const wordPhonetic = document.querySelector("#wordPhonetic");
 const wordExample = document.querySelector("#wordExample");
 const wordCardStatus = document.querySelector("#wordCardStatus");
+const wordCardSubmit = document.querySelector("#wordCardSubmit");
 const speakWord = document.querySelector("#speakWord");
 const deleteWord = document.querySelector("#deleteWord");
 
 let vocabulary = {};
+let scenes = [];
+let persistedDraft = {};
+let activeContentIndex = 0;
 let activeWord = "";
+let activeDisplayWord = "";
 let cardTrigger = null;
 
 function getDraft() {
+  const original = {
+    title: originalTitleInput.value,
+    english: englishInput.value,
+    chineseTitle: chineseTitleInput.value,
+    chinese: chineseInput.value,
+  };
   return {
     title: titleInput.value,
-    english: englishInput.value,
-    chinese: chineseInput.value,
+    original,
+    scenes,
+    // Keep legacy fields current so older versions can still open the original article.
+    english: original.english,
+    chineseTitle: original.chineseTitle,
+    chinese: original.chinese,
   };
 }
 
 function saveDraft() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...getDraft(), vocabulary }));
+  persistedDraft = { ...persistedDraft, ...getDraft(), vocabulary };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedDraft));
 }
 
 function loadDraft() {
   try {
-    const draft = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!draft || typeof draft !== "object") return;
-
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return;
+    const draft = ContentModel.normalizeStoredDraft(JSON.parse(stored));
+    persistedDraft = draft;
     titleInput.value = typeof draft.title === "string" ? draft.title : "";
-    englishInput.value = typeof draft.english === "string" ? draft.english : "";
-    chineseInput.value = typeof draft.chinese === "string" ? draft.chinese : "";
-    vocabulary = draft.vocabulary && typeof draft.vocabulary === "object"
-      ? draft.vocabulary
-      : {};
+    originalTitleInput.value = draft.original.title;
+    englishInput.value = draft.original.english;
+    chineseTitleInput.value = draft.original.chineseTitle;
+    chineseInput.value = draft.original.chinese;
+    scenes = draft.scenes;
+    vocabulary = draft.vocabulary;
   } catch {
-    localStorage.removeItem(STORAGE_KEY);
+    // Preserve unreadable existing data instead of deleting user content.
   }
 }
 
 function normalizeWord(word) {
-  return word.toLocaleLowerCase("en-US");
+  return ContentModel.normalizeWord(word);
 }
 
 function renderEnglish(text) {
@@ -114,15 +142,63 @@ function renderVocabulary() {
   });
 }
 
-function openWordCard(word, trigger) {
+function getContents() {
+  return [getDraft().original, ...scenes];
+}
+
+function renderContentSwitcher() {
+  contentSwitcher.replaceChildren();
+  getContents().forEach((content, index) => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "content-tab";
+    tab.id = `contentTab${index}`;
+    tab.dataset.index = String(index);
+    tab.textContent = index === 0 ? "原文" : `场景 ${index}`;
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-controls", "articleContent");
+    tab.setAttribute("aria-selected", String(index === activeContentIndex));
+    tab.tabIndex = index === activeContentIndex ? 0 : -1;
+    tab.title = content.title;
+    contentSwitcher.append(tab);
+  });
+}
+
+function showContent(index, { focusTab = false } = {}) {
+  const contents = getContents();
+  if (!contents[index]) return;
+  closeWordCard();
+  activeContentIndex = index;
+  const content = contents[index];
+  readerTitle.textContent = content.title.trim();
+  readerChineseTitle.textContent = content.chineseTitle.trim();
+  readerChineseTitle.hidden = !content.chineseTitle.trim();
+  renderEnglish(content.english);
+  document.querySelector("#articleContent").setAttribute("aria-labelledby", `contentTab${index} readerTitle`);
+  readerTranslation.textContent = content.chinese;
+  translationSection.hidden = !content.chinese.trim();
+  closeTranslation();
+  renderContentSwitcher();
+  if (focusTab) contentSwitcher.querySelector(`[data-index="${index}"]`)?.focus();
+}
+
+function clearTemporarySelection() {
+  readerEnglish.querySelectorAll(".word-token.is-selected").forEach((token) => {
+    token.classList.remove("is-selected");
+  });
+}
+
+function openWordCard(word, trigger, displayWord = word) {
   const entry = vocabulary[word];
-  if (!entry) return;
   activeWord = word;
+  activeDisplayWord = entry?.word || displayWord;
   cardTrigger = trigger || document.activeElement;
-  wordCardTitle.textContent = entry.word || word;
-  wordMeaning.value = entry.meaning || "";
-  wordPhonetic.value = entry.phonetic || "";
-  wordExample.value = entry.example || "";
+  wordCardTitle.textContent = activeDisplayWord;
+  wordMeaning.value = entry?.meaning || "";
+  wordPhonetic.value = entry?.phonetic || "";
+  wordExample.value = entry?.example || "";
+  wordCardSubmit.textContent = entry ? "保存修改" : "加入生词表";
+  deleteWord.hidden = !entry;
   wordCardStatus.textContent = "";
   wordCard.hidden = false;
   wordCardBackdrop.hidden = false;
@@ -132,21 +208,14 @@ function openWordCard(word, trigger) {
 
 function closeWordCard() {
   if (wordCard.hidden) return;
+  clearTemporarySelection();
   wordCard.hidden = true;
   wordCardBackdrop.hidden = true;
   document.body.style.overflow = "";
   if (cardTrigger && document.contains(cardTrigger)) cardTrigger.focus();
   activeWord = "";
+  activeDisplayWord = "";
   cardTrigger = null;
-}
-
-function collectWord(word, displayWord, trigger) {
-  if (!vocabulary[word]) {
-    vocabulary[word] = { word: displayWord.toLocaleLowerCase("en-US"), meaning: "", phonetic: "", example: "" };
-    saveDraft();
-    renderVocabulary();
-  }
-  openWordCard(word, trigger);
 }
 
 function clearValidation(input, errorElement) {
@@ -163,11 +232,18 @@ function showValidation(input, errorElement, message) {
 
 function validateDraft() {
   clearValidation(titleInput, titleError);
+  clearValidation(originalTitleInput, originalTitleError);
   clearValidation(englishInput, englishError);
 
   if (!titleInput.value.trim()) {
     showValidation(titleInput, titleError, "请填写文章标题。");
     titleInput.focus();
+    return false;
+  }
+
+  if (!originalTitleInput.value.trim()) {
+    showValidation(originalTitleInput, originalTitleError, "请填写原文英文标题。");
+    originalTitleInput.focus();
     return false;
   }
 
@@ -182,17 +258,14 @@ function validateDraft() {
 
 function closeTranslation() {
   translationToggle.setAttribute("aria-expanded", "false");
-  translationToggleText.textContent = "展开全文翻译";
+  translationToggleText.textContent = "展开中文翻译";
   readerTranslation.hidden = true;
 }
 
 function showReader() {
-  const draft = getDraft();
-  readerTitle.textContent = draft.title.trim();
-  renderEnglish(draft.english.trim());
-  readerTranslation.textContent = draft.chinese.trim();
-  translationSection.hidden = !draft.chinese.trim();
-  closeTranslation();
+  activeContentIndex = 0;
+  readerUnitTitle.textContent = getDraft().title.trim();
+  showContent(activeContentIndex);
   renderVocabulary();
 
   editorView.hidden = true;
@@ -212,7 +285,26 @@ function showEditor() {
 readerEnglish.addEventListener("click", (event) => {
   const token = event.target.closest(".word-token");
   if (!token) return;
-  collectWord(token.dataset.word, token.textContent, token);
+  clearTemporarySelection();
+  if (!vocabulary[token.dataset.word]) token.classList.add("is-selected");
+  openWordCard(token.dataset.word, token, token.textContent);
+});
+
+contentSwitcher.addEventListener("click", (event) => {
+  const tab = event.target.closest(".content-tab");
+  if (tab) showContent(Number(tab.dataset.index));
+});
+
+contentSwitcher.addEventListener("keydown", (event) => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  const lastIndex = getContents().length - 1;
+  let nextIndex = activeContentIndex;
+  if (event.key === "ArrowLeft") nextIndex = activeContentIndex === 0 ? lastIndex : activeContentIndex - 1;
+  if (event.key === "ArrowRight") nextIndex = activeContentIndex === lastIndex ? 0 : activeContentIndex + 1;
+  if (event.key === "Home") nextIndex = 0;
+  if (event.key === "End") nextIndex = lastIndex;
+  showContent(nextIndex, { focusTab: true });
 });
 
 vocabularyToggle.addEventListener("click", () => {
@@ -228,16 +320,21 @@ vocabularyItems.addEventListener("click", (event) => {
 
 wordCardForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!activeWord || !vocabulary[activeWord]) return;
+  if (!activeWord) return;
+  const isNewWord = !vocabulary[activeWord];
   vocabulary[activeWord] = {
     ...vocabulary[activeWord],
+    word: activeDisplayWord.toLocaleLowerCase("en-US"),
     meaning: wordMeaning.value.trim(),
     phonetic: wordPhonetic.value.trim(),
     example: wordExample.value.trim(),
   };
   saveDraft();
+  clearTemporarySelection();
   renderVocabulary();
-  wordCardStatus.textContent = "已保存到此设备";
+  wordCardSubmit.textContent = "保存修改";
+  deleteWord.hidden = false;
+  wordCardStatus.textContent = isNewWord ? "已加入生词表并保存到此设备" : "修改已保存到此设备";
 });
 
 deleteWord.addEventListener("click", () => {
@@ -253,7 +350,7 @@ speakWord.addEventListener("click", () => {
     wordCardStatus.textContent = "当前浏览器不支持系统朗读。";
     return;
   }
-  const utterance = new SpeechSynthesisUtterance(vocabulary[activeWord].word || activeWord);
+  const utterance = new SpeechSynthesisUtterance(activeDisplayWord || activeWord);
   utterance.lang = "en-US";
   const voices = window.speechSynthesis.getVoices();
   utterance.voice = voices.find((voice) => voice.lang === "en-US")
@@ -282,8 +379,10 @@ document.addEventListener("keydown", (event) => {
 });
 
 articleForm.addEventListener("input", (event) => {
+  if (event.target === structuredImport) return;
   saveDraft();
   if (event.target === titleInput) clearValidation(titleInput, titleError);
+  if (event.target === originalTitleInput) clearValidation(originalTitleInput, originalTitleError);
   if (event.target === englishInput) clearValidation(englishInput, englishError);
 });
 
@@ -296,10 +395,39 @@ articleForm.addEventListener("submit", (event) => {
 translationToggle.addEventListener("click", () => {
   const willExpand = translationToggle.getAttribute("aria-expanded") === "false";
   translationToggle.setAttribute("aria-expanded", String(willExpand));
-  translationToggleText.textContent = willExpand ? "收起全文翻译" : "展开全文翻译";
+  translationToggleText.textContent = willExpand ? "收起中文翻译" : "展开中文翻译";
   readerTranslation.hidden = !willExpand;
 });
 
 backButton.addEventListener("click", showEditor);
+
+importContent.addEventListener("click", () => {
+  importStatus.classList.remove("is-error", "is-success");
+  try {
+    const imported = ContentModel.parseImport(structuredImport.value);
+    titleInput.value = imported.articleTitle;
+    originalTitleInput.value = imported.original.title;
+    englishInput.value = imported.original.english;
+    chineseTitleInput.value = imported.original.chineseTitle;
+    chineseInput.value = imported.original.chinese;
+    scenes = imported.scenes;
+    saveDraft();
+    clearValidation(titleInput, titleError);
+    clearValidation(originalTitleInput, originalTitleError);
+    clearValidation(englishInput, englishError);
+    importStatus.textContent = "内容导入成功";
+    importStatus.classList.add("is-success");
+  } catch (error) {
+    importStatus.textContent = error.message;
+    importStatus.classList.add("is-error");
+  }
+});
+
+clearImport.addEventListener("click", () => {
+  structuredImport.value = "";
+  importStatus.textContent = "";
+  importStatus.classList.remove("is-error", "is-success");
+  structuredImport.focus();
+});
 
 loadDraft();

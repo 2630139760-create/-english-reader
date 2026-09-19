@@ -29,8 +29,22 @@
         </div>
 
         <form id="articleForm" class="editor-card" novalidate>
+          <details class="import-panel">
+            <summary>从 ChatGPT 导入场景内容</summary>
+            <div class="import-panel-body">
+              <p class="format-note">粘贴包含 articleTitle、original 和 1～5 项 scenes 的 JSON。导入只在本地处理，不会发送到任何 API。</p>
+              <label for="structuredImport">结构化 JSON</label>
+              <textarea id="structuredImport" rows="10" spellcheck="false" placeholder='{"articleTitle":"学习单元标题","original":{...},"scenes":[...]}'></textarea>
+              <p id="importStatus" class="import-status" role="status" aria-live="polite"></p>
+              <div class="import-actions">
+                <button id="importContent" class="primary-button" type="button">导入内容</button>
+                <button id="clearImport" class="secondary-button" type="button">清空输入</button>
+              </div>
+            </div>
+          </details>
+
           <div class="field field-title">
-            <label for="articleTitle">文章标题</label>
+            <label for="articleTitle">学习单元标题</label>
             <input
               id="articleTitle"
               name="articleTitle"
@@ -40,6 +54,20 @@
               required
             />
             <p class="field-error" id="titleError" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <label for="originalTitle">原文英文标题</label>
+            <input id="originalTitle" type="text" placeholder="例如：The Joy of Reading" autocomplete="off" required />
+            <p class="field-error" id="originalTitleError" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label for="chineseTitle">原文中文标题</label>
+              <span>选填</span>
+            </div>
+            <input id="chineseTitle" type="text" placeholder="例如：阅读的乐趣" autocomplete="off" />
           </div>
 
           <div class="field">
@@ -110,9 +138,15 @@
           <p id="vocabularyEmpty" class="vocabulary-empty">点击文章中的英文单词，把它加入这里。</p>
         </section>
 
-        <article class="article-card">
+        <p id="readerUnitTitle" class="reader-unit-title"></p>
+        <div class="content-switcher-wrap">
+          <div id="contentSwitcher" class="content-switcher" role="tablist" aria-label="切换原文和场景文章"></div>
+        </div>
+
+        <article id="articleContent" class="article-card" role="tabpanel" aria-live="polite">
           <header class="article-header">
             <p class="eyebrow">ENGLISH ARTICLE</p>
+            <p id="readerChineseTitle" class="article-chinese-title" lang="zh-CN" hidden></p>
             <h1 id="readerTitle"></h1>
             <div class="title-rule" aria-hidden="true"></div>
           </header>
@@ -127,7 +161,7 @@
               aria-expanded="false"
               aria-controls="readerTranslation"
             >
-              <span id="translationToggleText">展开全文翻译</span>
+              <span id="translationToggleText">展开中文翻译</span>
               <span class="chevron" aria-hidden="true">⌄</span>
             </button>
             <div id="readerTranslation" class="translation-body" lang="zh-CN" hidden></div>
@@ -172,7 +206,7 @@
           <button id="speakWord" class="secondary-button" type="button" aria-label="朗读当前英文单词">
             <span aria-hidden="true">◖</span> 朗读
           </button>
-          <button class="primary-button" type="submit">保存</button>
+          <button id="wordCardSubmit" class="primary-button" type="submit">加入生词表</button>
         </div>
         <button id="deleteWord" class="delete-button" type="button">从生词表删除</button>
       </form>
@@ -182,6 +216,7 @@
       <p>Read slowly. Think deeply.</p>
     </footer>
 
+    <script src="content-model.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
