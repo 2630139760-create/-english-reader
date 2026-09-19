@@ -19,15 +19,18 @@ const css=fs.readFileSync(path.join(__dirname,'..','styles.css'),'utf8');
 const ids=[...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]);
 const map=Object.fromEntries(ids.map(id=>['#'+id,new El('div',id)]));
 for(const id of ['articleForm','wordCardForm'])map['#'+id].tagName='FORM';
-for(const id of ['wordCard','wordCardBackdrop','readerView','libraryPanel','libraryBackdrop','articleVocabulary'])map['#'+id].hidden=true;
+for(const id of ['wordCard','wordCardBackdrop','readerView','libraryPanel','libraryBackdrop','articleVocabulary','dataPanel','dataBackdrop','backupPreview'])map['#'+id].hidden=true;
 for(const filter of ['all','word','phrase']){const b=new El('button');b.dataset.filter=filter;map['#vocabularyFilters'].append(b);const c=new El('button');c.dataset.filter=filter;map['#articleVocabularyFilters'].append(c)}
-const document={activeElement:null,body:new El('body'),querySelector:s=>map[s],createElement:t=>new El(t),createTextNode:t=>({textContent:t,nodeType:3}),createDocumentFragment(){const x=new El();x.fragment=true;return x},contains:()=>true,listeners:{},addEventListener(t,f){(this.listeners[t]??=[]).push(f)}};
+let selectedImportMode='merge';
+const document={activeElement:null,body:new El('body'),querySelector:s=>s==='input[name="importMode"]:checked'?{value:selectedImportMode}:map[s],createElement:t=>new El(t),createTextNode:t=>({textContent:t,nodeType:3}),createDocumentFragment(){const x=new El();x.fragment=true;return x},contains:()=>true,listeners:{},addEventListener(t,f){(this.listeners[t]??=[]).push(f)}};
 const legacy={articleTitle:'Legacy unit',original:{title:'Legacy English',english:'Keep  spaces. A well-known writer can\'t stop now.\n\nSecond paragraph.',chineseTitle:'旧标题',chinese:'旧翻译'},scenes:[{title:'Legacy scene',english:'Keep this scene.',chineseTitle:'旧场景',chinese:'场景翻译'}],vocabulary:{keep:{word:'Keep',meaning:'保留'}}};
 const store={'english-context-reader-draft':JSON.stringify(legacy)};
 const localStorage={getItem:k=>store[k]??null,setItem:(k,v)=>store[k]=v,removeItem:k=>delete store[k]};
 let confirms=[],promptValue=null;
 const window={scrollY:0,scrollTo(options){this.scrollY=options?.top||0},listeners:{},addEventListener(type,fn){(this.listeners[type]??=[]).push(fn)},dispatch(type){for(const fn of this.listeners[type]||[])fn()},confirm(){return confirms.length?confirms.shift():false},prompt(){return promptValue},speechSynthesis:{getVoices:()=>[],cancel(){},speak(){}}};
-const context={document,window,localStorage,SpeechSynthesisUtterance:function(){},console,Date,Math};
+class FileReader { readAsText(file){this.result=file.content;this.onload()} }
+const navigator={clipboard:{writeText:async text=>{navigator.copied=text}}};
+const context={document,window,localStorage,navigator,FileReader,SpeechSynthesisUtterance:function(){},console,Date,Math};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8'),context,{filename:'app.js'});
 const saved=()=>JSON.parse(store['english-context-reader-library-v4']);
 
@@ -110,4 +113,41 @@ map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.fil
 
 // Stored state contains current id, last reading positions, normalized source arrays and vocabulary.
 assert.ok(saved().currentId);assert.ok(saved().articles.every(x=>Number.isInteger(x.lastContentIndex)&&Number.isFinite(x.lastScrollY)));assert.ok(Object.values(saved().vocabulary).every(x=>Array.isArray(x.sources)));
-console.log('Passed: legacy migration; deduplicated article counts; article filters; shared relations; per-article removal; global deletion; safe article deletion; tab/scroll restoration; persistence');
+
+// Phase-five data management is visible and every primary control has a real event handler.
+for(const id of ['dataManagementButton','exportDataButton','copyBackupButton','backupFile','previewBackupButton','confirmImportButton','undoImportButton'])assert.ok(ids.includes(id)&&Object.values(map['#'+id].listeners).some(x=>x.length),`${id} must be visible and interactive`);
+map['#dataManagementButton'].dispatch('click');assert.equal(map['#dataPanel'].hidden,false);
+
+// A complete export contains the envelope, translations, scenes, vocabulary fields, relations and progress.
+const exported=JSON.parse(context.backupJSON());
+assert.equal(exported.application,'英语语境阅读器');assert.equal(exported.schemaVersion,1);assert.equal(exported.statistics.articles,saved().articles.length);
+assert.ok(exported.data.library.articles.every(x=>'lastContentIndex'in x&&'lastScrollY'in x&&x.original.chinese!==undefined));
+assert.ok(Object.values(exported.data.library.vocabulary).every(x=>Array.isArray(x.sources)));
+map['#copyBackupButton'].dispatch('click');
+
+// Invalid JSON and structurally incomplete backups never change local data.
+let before=store['english-context-reader-library-v4'];map['#backupText'].value='{broken';map['#previewBackupButton'].dispatch('click');assert.equal(store['english-context-reader-library-v4'],before);assert.ok(map['#dataStatus'].textContent.includes('JSON'));
+map['#backupText'].value=JSON.stringify({application:'英语语境阅读器',schemaVersion:1,exportedAt:new Date().toISOString(),data:{}});map['#previewBackupButton'].dispatch('click');assert.equal(store['english-context-reader-library-v4'],before);assert.ok(map['#dataStatus'].className.includes('is-error'));
+
+// Merge mode retains local content, deduplicates words/phrases, merges article relations, and safely renames same-title/different-content articles.
+const base=saved(),shared=base.vocabulary['word:brave']||Object.values(base.vocabulary)[0];
+const incoming={version:5,currentId:'incoming-1',articles:[
+  {id:'incoming-1',articleTitle:base.articles[0].articleTitle,original:{title:'Different',english:'Different article body.',chineseTitle:'不同',chinese:'不同译文'},scenes:[{title:'S1',english:'One.',chineseTitle:'一',chinese:'一'}],lastContentIndex:1,lastScrollY:321},
+  {id:'incoming-3',articleTitle:'Three scenes',original:{title:'Three',english:'Three body.',chineseTitle:'三',chinese:'译'},scenes:[1,2,3].map(n=>({title:`S${n}`,english:`Scene ${n}.`,chineseTitle:`景${n}`,chinese:`译${n}`})),lastContentIndex:3,lastScrollY:123},
+  {id:'incoming-5',articleTitle:'Five scenes',original:{title:'Five',english:'Five body.',chineseTitle:'五',chinese:'译'},scenes:[1,2,3,4,5].map(n=>({title:`S${n}`,english:`Scene ${n}.`,chineseTitle:`景${n}`,chinese:`译${n}`})),lastContentIndex:5,lastScrollY:456}
+],vocabulary:{'word:brave':{...shared,type:'word',text:'brave',meaning:'勇敢',sources:[{articleId:'incoming-1',source:'Different article body.'}]},'phrase:train station':{type:'phrase',text:'train station',meaning:'火车站',phonetic:'',example:'Meet at the train station.',sources:[{articleId:'incoming-3',source:'Three body.'}]}}};
+const incomingBackup={application:'英语语境阅读器',schemaVersion:1,exportedAt:'2026-09-19T19:29:00.000Z',statistics:{},data:{library:incoming,settings:{currentArticleId:'incoming-1'}}};
+map['#backupText'].value=JSON.stringify(incomingBackup);map['#previewBackupButton'].dispatch('click');assert.equal(map['#backupPreview'].hidden,false);assert.ok(map['#backupPreviewDetails'].textContent.includes('安全导入：是'));
+selectedImportMode='merge';map['#confirmImportButton'].dispatch('click');let merged=saved();assert.ok(merged.articles.length>=base.articles.length+3);assert.ok(merged.articles.some(x=>x.articleTitle.includes('（导入')));assert.equal(Object.keys(merged.vocabulary).filter(x=>x==='word:brave').length,1);assert.equal(Object.keys(merged.vocabulary).filter(x=>x==='phrase:train station').length,1);assert.ok(merged.vocabulary['word:brave'].sources.some(x=>x.articleId==='incoming-1'));assert.equal(merged.articles.find(x=>x.id==='incoming-3').scenes.length,3);assert.equal(merged.articles.find(x=>x.id==='incoming-5').scenes.length,5);assert.equal(merged.articles.find(x=>x.id==='incoming-5').lastScrollY,456);
+
+// File selection follows the same validate/preview path without writing immediately.
+before=store['english-context-reader-library-v4'];map['#backupFile'].files=[{name:'valid.json',content:JSON.stringify(incomingBackup)}];map['#backupFile'].dispatch('change');assert.equal(store['english-context-reader-library-v4'],before);assert.equal(map['#backupPreview'].hidden,false);
+
+// Current raw/old library data is migrated through normalization before import.
+map['#backupText'].value=JSON.stringify({version:4,currentId:'old',articles:[{id:'old',articleTitle:'Old backup',original:{title:'Old',english:'Old text.'},scenes:[]}],vocabulary:{this:{word:'this',meaning:'这个'}}});map['#previewBackupButton'].dispatch('click');assert.ok(map['#backupPreviewDetails'].textContent.includes('旧版本数据：是'));
+
+// Replace is double-confirmed, fully restores the backup, and undo is double-confirmed and restores the pre-import snapshot.
+const preReplace=store['english-context-reader-library-v4'];map['#backupText'].value=JSON.stringify(incomingBackup);map['#previewBackupButton'].dispatch('click');selectedImportMode='replace';confirms=[true,true];map['#confirmImportButton'].dispatch('click');assert.equal(saved().articles.length,3);assert.equal(saved().articles.find(x=>x.id==='incoming-1').lastContentIndex,1);assert.ok(store['english-context-reader-import-snapshot-v1']);
+confirms=[true,true];map['#undoImportButton'].dispatch('click');assert.equal(store['english-context-reader-library-v4'],preReplace);assert.ok(!store['english-context-reader-import-snapshot-v1']);
+
+console.log('Passed: legacy migration; UI behavior; complete backup; JSON/file preview; safe merge/deduplication; old-data migration; replace/undo; 1/3/5 scenes; progress restoration');
