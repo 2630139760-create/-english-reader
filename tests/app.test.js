@@ -15,6 +15,7 @@ class El {
   querySelector(sel){const m=sel.match(/\[data-index="(\d+)"\]/);return m?this.children.find(x=>x.dataset.index===m[1]):null}
 }
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+const css=fs.readFileSync(path.join(__dirname,'..','styles.css'),'utf8');
 const ids=[...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]);
 const map=Object.fromEntries(ids.map(id=>['#'+id,new El('div',id)]));
 for(const id of ['articleForm','wordCardForm'])map['#'+id].tagName='FORM';
@@ -29,6 +30,13 @@ const window={scrollTo(){},confirm(){return confirms.length?confirms.shift():fal
 const context={document,window,localStorage,SpeechSynthesisUtterance:function(){},console,Date,Math};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8'),context,{filename:'app.js'});
 const saved=()=>JSON.parse(store['english-context-reader-library-v4']);
+
+// The actual DOM exposes every phase-four action instead of only implementing its data model.
+for(const id of ['editorLibraryButton','editorNewArticleButton','readerLibraryButton','phraseModeButton','vocabularyToggle'])assert.ok(ids.includes(id),`${id} must exist`);
+for(const label of ['文章库','词汇表','选择短语','全部','单词','短语'])assert.ok(html.includes(`>${label}<`)||html.includes(`>${label} `),`${label} must be visible`);
+assert.ok(css.includes('.reader-nav')&&css.match(/\.reader-nav\s*\{[^}]*flex-wrap:\s*wrap/s),'reader navigation must wrap at iPad landscape widths');
+assert.ok(css.match(/\.reader-actions\s*\{[^}]*flex-wrap:\s*wrap/s),'reader actions must not overflow');
+for(const id of ['editorLibraryButton','editorNewArticleButton','readerLibraryButton','phraseModeButton','vocabularyToggle'])assert.ok((map['#'+id].listeners.click||[]).length,`${id} must bind a click event`);
 
 // Legacy migration retains article, scene, translation and vocabulary without deleting the old key.
 assert.equal(saved().articles.length,1);assert.equal(saved().articles[0].scenes[0].chinese,'场景翻译');assert.equal(saved().articles[0].original.chinese,'旧翻译');assert.equal(saved().vocabulary['word:keep'].meaning,'保留');assert.ok(store['english-context-reader-draft']);
@@ -51,6 +59,11 @@ words=map['#readerEnglish'].querySelectorAll('.word-token');const firstAgain=wor
 
 // All/word/phrase filters show the correct item type.
 const filters=[...map['#vocabularyFilters'].children];map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='phrase')});assert.ok(map['#vocabularyItems'].children.every(x=>x.textContent.startsWith('短语')));map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='word')});assert.ok(map['#vocabularyItems'].children.every(x=>x.textContent.startsWith('单词')));
+map['#vocabularyToggle'].dispatch('click');assert.equal(map['#vocabularyList'].hidden,false);assert.equal(map['#vocabularyToggle'].getAttribute('aria-expanded'),'true');
+
+// Both editor and reader library entry points open the real interface.
+map['#editorLibraryButton'].dispatch('click');assert.equal(map['#libraryPanel'].hidden,false);map['#libraryClose'].dispatch('click');
+map['#readerLibraryButton'].dispatch('click');assert.equal(map['#libraryPanel'].hidden,false);map['#libraryClose'].dispatch('click');
 
 // Rename and delete use confirmations; vocabulary is retained by default after article deletion.
 map['#libraryButton'].dispatch('click');let targetCard=map['#libraryItems'].children.find(card=>card.children.some(x=>x.dataset.id==='stable-id'));promptValue='Renamed';let rename=targetCard.children.find(x=>x.dataset.action==='rename');map['#libraryItems'].dispatch('click',{target:rename});assert.equal(saved().articles.find(x=>x.id==='stable-id').articleTitle,'Renamed');targetCard=map['#libraryItems'].children.find(card=>card.children.some(x=>x.dataset.id==='stable-id'));confirms=[true,false];map['#libraryItems'].dispatch('click',{target:targetCard.children.find(x=>x.dataset.action==='delete')});assert.ok(!saved().articles.some(x=>x.id==='stable-id'));assert.ok(Object.values(saved().vocabulary).some(x=>x.type==='phrase'&&x.articleId==='stable-id'));

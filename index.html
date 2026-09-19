@@ -29,6 +29,10 @@
           <p class="eyebrow">YOUR READING SPACE</p>
           <h1 id="pageTitle">英语语境阅读器</h1>
           <p class="intro-copy">粘贴一篇英文文章，留出一段安静的时间，在语境中开始阅读。</p>
+          <div class="editor-actions" aria-label="文章操作">
+            <button id="editorLibraryButton" class="secondary-button" type="button">文章库</button>
+            <button id="editorNewArticleButton" class="primary-button" type="button">新建文章</button>
+          </div>
         </div>
 
         <form id="articleForm" class="editor-card" novalidate>
@@ -146,7 +150,7 @@
             返回编辑
           </button>
           <div class="reader-actions">
-            <span class="reading-label">专注阅读</span>
+            <button id="readerLibraryButton" class="secondary-button compact-button" type="button" aria-label="打开文章库">文章库</button>
             <button id="phraseModeButton" class="secondary-button compact-button" type="button" aria-pressed="false" aria-label="开启选择短语模式">选择短语</button>
             <button
               id="vocabularyToggle"
