@@ -17,7 +17,10 @@
         <span class="brand-mark" aria-hidden="true">E</span>
         <span>英语语境阅读器</span>
       </a>
-      <p class="header-note">READ IN CONTEXT</p>
+      <div class="header-tools">
+        <p class="header-note">READ IN CONTEXT</p>
+        <button id="libraryButton" class="secondary-button compact-button" type="button" aria-label="打开文章库">文章库</button>
+      </div>
     </header>
 
     <main>
@@ -120,16 +123,16 @@
               <p id="importStatus" class="import-status" role="status" aria-live="polite"></p>
               <p id="sceneSummary" class="scene-summary">当前没有场景文章</p>
               <div class="import-actions">
-                <button id="importButton" class="primary-button" type="button">导入内容</button>
-                <button id="clearImportButton" class="secondary-button" type="button">清空输入</button>
+                <button id="importButton" class="primary-button" type="button" aria-label="导入为新的学习单元">导入内容</button>
+                <button id="clearImportButton" class="secondary-button" type="button" aria-label="清空 JSON 输入">清空输入</button>
               </div>
             </div>
           </details>
 
           <div class="form-footer">
             <p><span class="save-dot" aria-hidden="true"></span>内容会自动保存在此设备</p>
-            <button class="primary-button" type="submit">
-              创建阅读
+            <button class="primary-button" type="submit" aria-label="保存当前文章并开始阅读">
+              保存并阅读
               <span aria-hidden="true">→</span>
             </button>
           </div>
@@ -138,31 +141,38 @@
 
       <section id="readerView" class="reader-view" aria-labelledby="readerTitle" hidden>
         <nav class="reader-nav" aria-label="阅读操作">
-          <button id="backButton" class="back-button" type="button">
+          <button id="backButton" class="back-button" type="button" aria-label="返回文章编辑页">
             <span aria-hidden="true">←</span>
             返回编辑
           </button>
           <div class="reader-actions">
             <span class="reading-label">专注阅读</span>
+            <button id="phraseModeButton" class="secondary-button compact-button" type="button" aria-pressed="false" aria-label="开启选择短语模式">选择短语</button>
             <button
               id="vocabularyToggle"
               class="vocabulary-toggle"
+              aria-label="展开或收起词汇表"
               type="button"
               aria-expanded="false"
               aria-controls="vocabularyList"
             >
-              生词表 <span id="vocabularyCount" class="vocabulary-count">0</span>
+              词汇表 <span id="vocabularyCount" class="vocabulary-count">0</span>
             </button>
           </div>
         </nav>
 
-        <section id="vocabularyList" class="vocabulary-list" aria-label="当前文章生词表" hidden>
+        <section id="vocabularyList" class="vocabulary-list" aria-label="词汇表" hidden>
           <div class="vocabulary-list-header">
-            <h2>当前文章的生词</h2>
+            <h2>词汇表</h2>
             <span id="vocabularySummary">共 0 个</span>
           </div>
+          <div id="vocabularyFilters" class="vocabulary-filters" role="group" aria-label="筛选词汇类型">
+            <button type="button" data-filter="all" aria-label="显示全部词汇" aria-pressed="true">全部</button>
+            <button type="button" data-filter="word" aria-label="只显示单词" aria-pressed="false">单词</button>
+            <button type="button" data-filter="phrase" aria-label="只显示短语" aria-pressed="false">短语</button>
+          </div>
           <div id="vocabularyItems" class="vocabulary-items"></div>
-          <p id="vocabularyEmpty" class="vocabulary-empty">点击文章中的英文单词，把它加入这里。</p>
+          <p id="vocabularyEmpty" class="vocabulary-empty">点击单词，或使用“选择短语”，把词汇加入这里。</p>
         </section>
 
         <div id="articleTabs" class="article-tabs" role="tablist" aria-label="切换阅读内容"></div>
@@ -180,6 +190,7 @@
             <button
               id="translationToggle"
               class="translation-toggle"
+              aria-label="展开或收起中文全文翻译"
               type="button"
               aria-expanded="false"
               aria-controls="readerTranslation"
@@ -211,13 +222,17 @@
           <p class="eyebrow">WORD CARD</p>
           <h2 id="wordCardTitle"></h2>
         </div>
-        <button id="wordCardClose" class="icon-button" type="button" aria-label="关闭生词卡">×</button>
+        <button id="wordCardClose" class="icon-button" type="button" aria-label="关闭词卡">×</button>
       </header>
 
       <form id="wordCardForm" class="word-card-form">
         <div class="field">
           <label for="wordMeaning">中文释义</label>
           <input id="wordMeaning" type="text" autocomplete="off" placeholder="输入中文释义" />
+        </div>
+        <div class="field">
+          <label for="wordSource">来源原句</label>
+          <textarea id="wordSource" rows="3" placeholder="来源原句（可修改）"></textarea>
         </div>
         <div class="field">
           <label for="wordPhonetic">音标</label>
@@ -229,13 +244,28 @@
         </div>
         <p id="wordCardStatus" class="word-card-status" role="status" aria-live="polite"></p>
         <div class="word-card-actions">
-          <button id="speakWord" class="secondary-button" type="button" aria-label="朗读当前英文单词">
+          <button id="speakWord" class="secondary-button" type="button" aria-label="朗读当前单词或短语">
             <span aria-hidden="true">◖</span> 朗读
           </button>
-          <button id="wordCardSubmit" class="primary-button" type="submit">加入生词表</button>
+          <button id="wordCardSubmit" class="primary-button" type="submit">加入词汇表</button>
         </div>
-        <button id="deleteWord" class="delete-button" type="button">从生词表删除</button>
+        <button id="deleteWord" class="delete-button" type="button" aria-label="从词汇表删除当前词汇">从词汇表删除</button>
       </form>
+    </aside>
+
+    <div id="libraryBackdrop" class="word-card-backdrop" hidden></div>
+    <aside id="libraryPanel" class="library-panel" role="dialog" aria-modal="true" aria-labelledby="libraryTitle" hidden>
+      <header class="word-card-header">
+        <div><p class="eyebrow">YOUR LIBRARY</p><h2 id="libraryTitle">文章库</h2></div>
+        <button id="libraryClose" class="icon-button" type="button" aria-label="关闭文章库">×</button>
+      </header>
+      <div class="library-actions">
+        <button id="newArticleButton" class="primary-button" type="button" aria-label="新建文章">新建文章</button>
+        <button id="saveArticleButton" class="secondary-button" type="button" aria-label="保存当前文章">保存当前文章</button>
+      </div>
+      <p id="libraryStatus" class="word-card-status" role="status" aria-live="polite"></p>
+      <div id="libraryItems" class="library-items"></div>
+      <p id="libraryEmpty" class="vocabulary-empty">文章库还是空的，先新建或保存一篇文章吧。</p>
     </aside>
 
     <footer>

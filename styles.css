@@ -52,6 +52,18 @@ a {
   backdrop-filter: blur(12px);
 }
 
+.header-tools,
+.library-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.compact-button {
+  min-height: 40px;
+  padding: 0 14px;
+}
+
 .brand {
   display: inline-flex;
   gap: 12px;
@@ -438,6 +450,28 @@ textarea:focus {
   margin-top: 15px;
 }
 
+.vocabulary-filters {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.vocabulary-filters button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: white;
+  cursor: pointer;
+}
+
+.vocabulary-filters button[aria-pressed="true"] {
+  border-color: var(--blue);
+  color: white;
+  background: var(--blue);
+}
+
 .vocabulary-item {
   min-height: 38px;
   padding: 0 13px;
@@ -544,6 +578,14 @@ textarea:focus {
   text-underline-offset: 4px;
 }
 
+.word-token.is-phrase {
+  background: rgba(36, 95, 189, 0.08);
+}
+
+.phrase-mode .word-token {
+  cursor: crosshair;
+}
+
 .word-card-backdrop {
   position: fixed;
   z-index: 20;
@@ -565,6 +607,57 @@ textarea:focus {
   background: white;
   box-shadow: -18px 0 48px rgba(23, 35, 56, 0.16);
 }
+
+.library-panel {
+  position: fixed;
+  z-index: 22;
+  inset: 5vh max(24px, calc((100vw - 920px) / 2));
+  overflow-y: auto;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 24px 70px rgba(23, 35, 56, 0.22);
+}
+
+.library-panel h2 {
+  margin: 8px 0 0;
+  font-family: Georgia, serif;
+  font-size: 34px;
+  font-weight: 500;
+}
+
+.library-actions {
+  margin: 24px 0 12px;
+}
+
+.library-items {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.library-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) repeat(4, auto);
+  gap: 9px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.library-card h3,
+.library-card p {
+  margin: 0;
+}
+
+.library-card h3 { font-size: 17px; }
+.library-chinese,
+.library-meta { margin-top: 5px !important; color: var(--muted); font-size: 12px; }
+.library-card button { min-height: 38px; border: 1px solid #ccd8e9; border-radius: 8px; color: var(--blue); background: white; cursor: pointer; }
+.library-card .danger-text { color: var(--error); }
 
 .word-card-header {
   display: flex;
@@ -707,6 +800,10 @@ footer {
   .intro-copy {
     max-width: 520px;
   }
+
+  .library-panel { inset: 3vh 18px; }
+  .library-card { grid-template-columns: repeat(4, 1fr); }
+  .library-card > div { grid-column: 1 / -1; }
 }
 
 @media (max-width: 540px) {
@@ -766,6 +863,11 @@ footer {
   .reading-label {
     display: none;
   }
+
+  .reader-nav { align-items: flex-start; }
+  .reader-actions { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+  .library-panel { inset: 0; padding: 22px 16px; border-radius: 0; }
+  .library-actions { align-items: stretch; flex-direction: column; }
 
   .word-card {
     top: auto;
