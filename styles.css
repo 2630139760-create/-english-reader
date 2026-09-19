@@ -470,6 +470,29 @@ textarea:focus {
   margin-top: 15px;
 }
 
+.vocabulary-item-row {
+  display: flex;
+  max-width: 100%;
+  gap: 6px;
+}
+
+.vocabulary-item-row .vocabulary-item {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-align: left;
+}
+
+.remove-article-word {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d5e0f1;
+  border-radius: 9px;
+  color: var(--error);
+  background: white;
+  cursor: pointer;
+}
+
 .vocabulary-filters {
   display: flex;
   gap: 8px;
@@ -679,6 +702,18 @@ textarea:focus {
 .library-card button { min-height: 38px; border: 1px solid #ccd8e9; border-radius: 8px; color: var(--blue); background: white; cursor: pointer; }
 .library-card .danger-text { color: var(--error); }
 
+.article-vocabulary {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfcfe;
+}
+
+.article-vocabulary > .back-button { margin-bottom: 20px; }
+.article-vocabulary .vocabulary-items { flex-direction: column; }
+.article-vocabulary .vocabulary-item { flex: 1 1 auto; border-radius: 10px; }
+
 .word-card-header {
   display: flex;
   align-items: flex-start;
@@ -824,6 +859,7 @@ footer {
   .library-panel { inset: 3vh 18px; }
   .library-card { grid-template-columns: repeat(4, 1fr); }
   .library-card > div { grid-column: 1 / -1; }
+  .library-card button { min-width: 0; padding: 4px 6px; white-space: normal; }
 
   .reader-actions { gap: 8px; }
 }
@@ -890,6 +926,8 @@ footer {
   .reader-actions { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
   .library-panel { inset: 0; padding: 22px 16px; border-radius: 0; }
   .library-actions { align-items: stretch; flex-direction: column; }
+  .library-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vocabulary-item-row { flex-direction: column; }
 
   .word-card {
     top: auto;

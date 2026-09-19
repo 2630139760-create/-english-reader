@@ -270,6 +270,20 @@
       <p id="libraryStatus" class="word-card-status" role="status" aria-live="polite"></p>
       <div id="libraryItems" class="library-items"></div>
       <p id="libraryEmpty" class="vocabulary-empty">文章库还是空的，先新建或保存一篇文章吧。</p>
+      <section id="articleVocabulary" class="article-vocabulary" aria-labelledby="articleVocabularyTitle" hidden>
+        <button id="articleVocabularyBack" class="back-button" type="button" aria-label="返回文章库">← 返回文章库</button>
+        <div class="vocabulary-list-header">
+          <h2 id="articleVocabularyTitle"></h2>
+          <span id="articleVocabularySummary"></span>
+        </div>
+        <div id="articleVocabularyFilters" class="vocabulary-filters" role="group" aria-label="筛选本篇词汇类型">
+          <button type="button" data-filter="all" aria-label="显示本篇全部词汇" aria-pressed="true">全部</button>
+          <button type="button" data-filter="word" aria-label="只显示本篇单词" aria-pressed="false">单词</button>
+          <button type="button" data-filter="phrase" aria-label="只显示本篇短语" aria-pressed="false">短语</button>
+        </div>
+        <div id="articleVocabularyItems" class="vocabulary-items"></div>
+        <p id="articleVocabularyEmpty" class="vocabulary-empty">本篇还没有收藏词汇。</p>
+      </section>
     </aside>
 
     <footer>

@@ -19,14 +19,14 @@ const css=fs.readFileSync(path.join(__dirname,'..','styles.css'),'utf8');
 const ids=[...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]);
 const map=Object.fromEntries(ids.map(id=>['#'+id,new El('div',id)]));
 for(const id of ['articleForm','wordCardForm'])map['#'+id].tagName='FORM';
-for(const id of ['wordCard','wordCardBackdrop','readerView','libraryPanel','libraryBackdrop'])map['#'+id].hidden=true;
-for(const filter of ['all','word','phrase']){const b=new El('button');b.dataset.filter=filter;map['#vocabularyFilters'].append(b)}
+for(const id of ['wordCard','wordCardBackdrop','readerView','libraryPanel','libraryBackdrop','articleVocabulary'])map['#'+id].hidden=true;
+for(const filter of ['all','word','phrase']){const b=new El('button');b.dataset.filter=filter;map['#vocabularyFilters'].append(b);const c=new El('button');c.dataset.filter=filter;map['#articleVocabularyFilters'].append(c)}
 const document={activeElement:null,body:new El('body'),querySelector:s=>map[s],createElement:t=>new El(t),createTextNode:t=>({textContent:t,nodeType:3}),createDocumentFragment(){const x=new El();x.fragment=true;return x},contains:()=>true,listeners:{},addEventListener(t,f){(this.listeners[t]??=[]).push(f)}};
 const legacy={articleTitle:'Legacy unit',original:{title:'Legacy English',english:'Keep  spaces. A well-known writer can\'t stop now.\n\nSecond paragraph.',chineseTitle:'旧标题',chinese:'旧翻译'},scenes:[{title:'Legacy scene',english:'Keep this scene.',chineseTitle:'旧场景',chinese:'场景翻译'}],vocabulary:{keep:{word:'Keep',meaning:'保留'}}};
 const store={'english-context-reader-draft':JSON.stringify(legacy)};
 const localStorage={getItem:k=>store[k]??null,setItem:(k,v)=>store[k]=v,removeItem:k=>delete store[k]};
 let confirms=[],promptValue=null;
-const window={scrollTo(){},confirm(){return confirms.length?confirms.shift():false},prompt(){return promptValue},speechSynthesis:{getVoices:()=>[],cancel(){},speak(){}}};
+const window={scrollY:0,scrollTo(options){this.scrollY=options?.top||0},listeners:{},addEventListener(type,fn){(this.listeners[type]??=[]).push(fn)},dispatch(type){for(const fn of this.listeners[type]||[])fn()},confirm(){return confirms.length?confirms.shift():false},prompt(){return promptValue},speechSynthesis:{getVoices:()=>[],cancel(){},speak(){}}};
 const context={document,window,localStorage,SpeechSynthesisUtterance:function(){},console,Date,Math};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8'),context,{filename:'app.js'});
 const saved=()=>JSON.parse(store['english-context-reader-library-v4']);
@@ -55,19 +55,59 @@ let words=map['#readerEnglish'].querySelectorAll('.word-token');let brave=words.
 
 // Phrase mode selects the inclusive range, preserving hyphen/apostrophe and source sentence.
 map['#phraseModeButton'].dispatch('click');words=map['#readerEnglish'].querySelectorAll('.word-token');const first=words.find(x=>x.dataset.word==='brave'),last=words.find(x=>x.dataset.word==="can't");map['#readerEnglish'].dispatch('click',{target:first});map['#readerEnglish'].dispatch('click',{target:last});assert.equal(map['#wordCardTitle'].textContent,"Brave new-world can't");assert.ok(words.filter(x=>x.classList.contains('is-selected')).length===3);map['#wordCardClose'].dispatch('click');assert.equal(Object.values(saved().vocabulary).filter(x=>x.type==='phrase').length,0);assert.ok(words.every(x=>!x.classList.contains('is-selected')));
-words=map['#readerEnglish'].querySelectorAll('.word-token');const firstAgain=words.find(x=>x.dataset.word==='brave'),lastAgain=words.find(x=>x.dataset.word==="can't");map['#phraseModeButton'].dispatch('click');map['#readerEnglish'].dispatch('click',{target:firstAgain});map['#readerEnglish'].dispatch('click',{target:lastAgain});map['#wordCardForm'].dispatch('submit');let phrase=Object.values(saved().vocabulary).find(x=>x.type==='phrase');assert.equal(phrase.text,"Brave new-world can't");assert.equal(phrase.articleId,'stable-id');assert.ok(phrase.source.includes("Brave new-world can't wait here."));
+words=map['#readerEnglish'].querySelectorAll('.word-token');const firstAgain=words.find(x=>x.dataset.word==='brave'),lastAgain=words.find(x=>x.dataset.word==="can't");map['#phraseModeButton'].dispatch('click');map['#readerEnglish'].dispatch('click',{target:firstAgain});map['#readerEnglish'].dispatch('click',{target:lastAgain});map['#wordCardForm'].dispatch('submit');let phrase=Object.values(saved().vocabulary).find(x=>x.type==='phrase');assert.equal(phrase.text,"Brave new-world can't");assert.ok(phrase.sources.some(x=>x.articleId==='stable-id'&&x.source.includes("Brave new-world can't wait here.")));
 
 // All/word/phrase filters show the correct item type.
-const filters=[...map['#vocabularyFilters'].children];map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='phrase')});assert.ok(map['#vocabularyItems'].children.every(x=>x.textContent.startsWith('短语')));map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='word')});assert.ok(map['#vocabularyItems'].children.every(x=>x.textContent.startsWith('单词')));
+const filters=[...map['#vocabularyFilters'].children];map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='phrase')});assert.ok(map['#vocabularyItems'].children.every(x=>x.children[0].textContent.startsWith('短语')));map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='word')});assert.ok(map['#vocabularyItems'].children.every(x=>x.children[0].textContent.startsWith('单词')));
 map['#vocabularyToggle'].dispatch('click');assert.equal(map['#vocabularyList'].hidden,false);assert.equal(map['#vocabularyToggle'].getAttribute('aria-expanded'),'true');
 
 // Both editor and reader library entry points open the real interface.
 map['#editorLibraryButton'].dispatch('click');assert.equal(map['#libraryPanel'].hidden,false);map['#libraryClose'].dispatch('click');
 map['#readerLibraryButton'].dispatch('click');assert.equal(map['#libraryPanel'].hidden,false);map['#libraryClose'].dispatch('click');
 
-// Rename and delete use confirmations; vocabulary is retained by default after article deletion.
-map['#libraryButton'].dispatch('click');let targetCard=map['#libraryItems'].children.find(card=>card.children.some(x=>x.dataset.id==='stable-id'));promptValue='Renamed';let rename=targetCard.children.find(x=>x.dataset.action==='rename');map['#libraryItems'].dispatch('click',{target:rename});assert.equal(saved().articles.find(x=>x.id==='stable-id').articleTitle,'Renamed');targetCard=map['#libraryItems'].children.find(card=>card.children.some(x=>x.dataset.id==='stable-id'));confirms=[true,false];map['#libraryItems'].dispatch('click',{target:targetCard.children.find(x=>x.dataset.action==='delete')});assert.ok(!saved().articles.some(x=>x.id==='stable-id'));assert.ok(Object.values(saved().vocabulary).some(x=>x.type==='phrase'&&x.articleId==='stable-id'));
+// Cards expose exactly Open, per-article vocabulary, Rename and Delete; the count is deduplicated.
+map['#libraryButton'].dispatch('click');
+let targetCard=map['#libraryItems'].children.find(card=>card.children.some(x=>x.dataset.id==='stable-id'));
+assert.deepEqual(targetCard.children.filter(x=>x.dataset.action).map(x=>x.dataset.action),['open','vocabulary','rename','delete']);
+const stableCount=Object.values(saved().vocabulary).filter(x=>x.sources?.some(source=>source.articleId==='stable-id')).length;
+assert.equal(targetCard.children.find(x=>x.dataset.action==='vocabulary').textContent,`本篇词汇（${stableCount}）`);
 
-// Stored state contains current id, last reading positions and vocabulary, so a reload can restore them.
-assert.ok(saved().currentId);assert.ok(saved().articles.every(x=>Number.isInteger(x.lastContentIndex)));assert.ok(Object.keys(saved().vocabulary).length>=3);
-console.log('Passed: migration; multi-article CRUD/import choices; reading position; temporary/saved words; phrase select/cancel/save; normalization; filters; safe deletion; persistence');
+// The article panel contains only associated entries and supports all/word/phrase filters.
+map['#libraryItems'].dispatch('click',{target:targetCard.children.find(x=>x.dataset.action==='vocabulary')});
+assert.equal(map['#articleVocabulary'].hidden,false);assert.equal(map['#articleVocabularyTitle'].textContent,'《Overwritten》的词汇');
+assert.equal(map['#articleVocabularyItems'].children.length,stableCount);
+const articleFilters=map['#articleVocabularyFilters'].children;
+map['#articleVocabularyFilters'].dispatch('click',{target:articleFilters.find(x=>x.dataset.filter==='phrase')});
+assert.ok(map['#articleVocabularyItems'].children.every(row=>row.children[0].textContent.startsWith('短语')));
+map['#articleVocabularyFilters'].dispatch('click',{target:articleFilters.find(x=>x.dataset.filter==='word')});
+assert.ok(map['#articleVocabularyItems'].children.every(row=>row.children[0].textContent.startsWith('单词')));
+map['#articleVocabularyBack'].dispatch('click');
+
+// Reopening with the single Open action restores the last tab and scroll position.
+window.scrollY=245;window.dispatch('scroll');
+targetCard=map['#libraryItems'].children.find(card=>card.children.some(x=>x.dataset.id==='stable-id'));
+map['#libraryItems'].dispatch('click',{target:targetCard.children.find(x=>x.dataset.action==='open')});
+assert.equal(map['#articleTabs'].children.find(x=>x.getAttribute('aria-selected')==='true').dataset.index,'1');assert.equal(window.scrollY,245);
+
+// Saving an existing word in a second article adds a source without duplicating the global card.
+map['#libraryButton'].dispatch('click');let copyCard=map['#libraryItems'].children.find(card=>card.children[0].children[0].textContent==='Copy');
+map['#libraryItems'].dispatch('click',{target:copyCard.children.find(x=>x.dataset.action==='open')});
+words=map['#readerEnglish'].querySelectorAll('.word-token');const braveAgain=words.find(x=>x.dataset.word==='brave');map['#readerEnglish'].dispatch('click',{target:braveAgain});map['#wordCardForm'].dispatch('submit');
+const sharedKey='word:brave';assert.equal(Object.keys(saved().vocabulary).filter(x=>x===sharedKey).length,1);assert.ok(saved().vocabulary[sharedKey].sources.some(x=>x.articleId==='stable-id'));assert.ok(saved().vocabulary[sharedKey].sources.some(x=>x.articleId===copyCard.children.find(x=>x.dataset.id).dataset.id));
+
+// From-this-article removal preserves the global entry and its other article relation.
+map['#libraryButton'].dispatch('click');copyCard=map['#libraryItems'].children.find(card=>card.children[0].children[0].textContent==='Copy');
+map['#libraryItems'].dispatch('click',{target:copyCard.children.find(x=>x.dataset.action==='vocabulary')});
+let sharedRow=map['#articleVocabularyItems'].children.find(row=>row.children[0].dataset.key===sharedKey);confirms=[true];map['#articleVocabularyItems'].dispatch('click',{target:sharedRow.children[1]});
+assert.ok(saved().vocabulary[sharedKey]);assert.ok(!saved().vocabulary[sharedKey].sources.some(x=>x.articleId===copyCard.children.find(x=>x.dataset.id).dataset.id));assert.ok(saved().vocabulary[sharedKey].sources.some(x=>x.articleId==='stable-id'));
+
+// Rename and article deletion retain exclusive vocabulary by default and unlink the removed article.
+map['#articleVocabularyBack'].dispatch('click');targetCard=map['#libraryItems'].children.find(card=>card.children.some(x=>x.dataset.id==='stable-id'));promptValue='Renamed';map['#libraryItems'].dispatch('click',{target:targetCard.children.find(x=>x.dataset.action==='rename')});assert.equal(saved().articles.find(x=>x.id==='stable-id').articleTitle,'Renamed');
+targetCard=map['#libraryItems'].children.find(card=>card.children.some(x=>x.dataset.id==='stable-id'));confirms=[true,false];map['#libraryItems'].dispatch('click',{target:targetCard.children.find(x=>x.dataset.action==='delete')});assert.ok(!saved().articles.some(x=>x.id==='stable-id'));assert.ok(Object.values(saved().vocabulary).some(x=>x.type==='phrase'&&!x.sources.some(source=>source.articleId==='stable-id')));
+
+// Global deletion is confirmed and removes the card, which also removes all blue associations.
+map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='all')});const deleteTarget=map['#vocabularyItems'].children[0].children[0],deleteKey=deleteTarget.dataset.key;map['#vocabularyItems'].dispatch('click',{target:deleteTarget});confirms=[true];map['#deleteWord'].dispatch('click');assert.ok(!saved().vocabulary[deleteKey]);
+
+// Stored state contains current id, last reading positions, normalized source arrays and vocabulary.
+assert.ok(saved().currentId);assert.ok(saved().articles.every(x=>Number.isInteger(x.lastContentIndex)&&Number.isFinite(x.lastScrollY)));assert.ok(Object.values(saved().vocabulary).every(x=>Array.isArray(x.sources)));
+console.log('Passed: legacy migration; deduplicated article counts; article filters; shared relations; per-article removal; global deletion; safe article deletion; tab/scroll restoration; persistence');
