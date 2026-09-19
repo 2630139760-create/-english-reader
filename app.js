@@ -1,4 +1,5 @@
 const STORAGE_KEY = "english-context-reader-draft";
+const WORD_PATTERN = /[A-Za-z]+(?:[’'][A-Za-z]+)*(?:-[A-Za-z]+(?:[’'][A-Za-z]+)*)*/g;
 
 const editorView = document.querySelector("#editorView");
 const readerView = document.querySelector("#readerView");
@@ -15,6 +16,27 @@ const translationSection = document.querySelector("#translationSection");
 const translationToggle = document.querySelector("#translationToggle");
 const translationToggleText = document.querySelector("#translationToggleText");
 const backButton = document.querySelector("#backButton");
+const vocabularyToggle = document.querySelector("#vocabularyToggle");
+const vocabularyCount = document.querySelector("#vocabularyCount");
+const vocabularyList = document.querySelector("#vocabularyList");
+const vocabularySummary = document.querySelector("#vocabularySummary");
+const vocabularyItems = document.querySelector("#vocabularyItems");
+const vocabularyEmpty = document.querySelector("#vocabularyEmpty");
+const wordCard = document.querySelector("#wordCard");
+const wordCardBackdrop = document.querySelector("#wordCardBackdrop");
+const wordCardClose = document.querySelector("#wordCardClose");
+const wordCardTitle = document.querySelector("#wordCardTitle");
+const wordCardForm = document.querySelector("#wordCardForm");
+const wordMeaning = document.querySelector("#wordMeaning");
+const wordPhonetic = document.querySelector("#wordPhonetic");
+const wordExample = document.querySelector("#wordExample");
+const wordCardStatus = document.querySelector("#wordCardStatus");
+const speakWord = document.querySelector("#speakWord");
+const deleteWord = document.querySelector("#deleteWord");
+
+let vocabulary = {};
+let activeWord = "";
+let cardTrigger = null;
 
 function getDraft() {
   return {
@@ -25,7 +47,7 @@ function getDraft() {
 }
 
 function saveDraft() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(getDraft()));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...getDraft(), vocabulary }));
 }
 
 function loadDraft() {
@@ -36,9 +58,95 @@ function loadDraft() {
     titleInput.value = typeof draft.title === "string" ? draft.title : "";
     englishInput.value = typeof draft.english === "string" ? draft.english : "";
     chineseInput.value = typeof draft.chinese === "string" ? draft.chinese : "";
+    vocabulary = draft.vocabulary && typeof draft.vocabulary === "object"
+      ? draft.vocabulary
+      : {};
   } catch {
     localStorage.removeItem(STORAGE_KEY);
   }
+}
+
+function normalizeWord(word) {
+  return word.toLocaleLowerCase("en-US");
+}
+
+function renderEnglish(text) {
+  const fragment = document.createDocumentFragment();
+  let cursor = 0;
+
+  for (const match of text.matchAll(WORD_PATTERN)) {
+    fragment.append(document.createTextNode(text.slice(cursor, match.index)));
+    const normalized = normalizeWord(match[0]);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "word-token";
+    button.dataset.word = normalized;
+    button.textContent = match[0];
+    button.setAttribute("aria-label", `${match[0]}，打开生词卡`);
+    button.classList.toggle("is-saved", Boolean(vocabulary[normalized]));
+    fragment.append(button);
+    cursor = match.index + match[0].length;
+  }
+
+  fragment.append(document.createTextNode(text.slice(cursor)));
+  readerEnglish.replaceChildren(fragment);
+}
+
+function renderVocabulary() {
+  const words = Object.keys(vocabulary).sort((a, b) => a.localeCompare(b, "en"));
+  vocabularyCount.textContent = String(words.length);
+  vocabularySummary.textContent = `共 ${words.length} 个`;
+  vocabularyEmpty.hidden = words.length > 0;
+  vocabularyItems.replaceChildren();
+
+  words.forEach((word) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "vocabulary-item";
+    button.dataset.word = word;
+    button.textContent = vocabulary[word].word || word;
+    button.setAttribute("aria-label", `打开 ${button.textContent} 的生词卡`);
+    vocabularyItems.append(button);
+  });
+
+  readerEnglish.querySelectorAll(".word-token").forEach((token) => {
+    token.classList.toggle("is-saved", Boolean(vocabulary[token.dataset.word]));
+  });
+}
+
+function openWordCard(word, trigger) {
+  const entry = vocabulary[word];
+  if (!entry) return;
+  activeWord = word;
+  cardTrigger = trigger || document.activeElement;
+  wordCardTitle.textContent = entry.word || word;
+  wordMeaning.value = entry.meaning || "";
+  wordPhonetic.value = entry.phonetic || "";
+  wordExample.value = entry.example || "";
+  wordCardStatus.textContent = "";
+  wordCard.hidden = false;
+  wordCardBackdrop.hidden = false;
+  document.body.style.overflow = "hidden";
+  wordCardClose.focus();
+}
+
+function closeWordCard() {
+  if (wordCard.hidden) return;
+  wordCard.hidden = true;
+  wordCardBackdrop.hidden = true;
+  document.body.style.overflow = "";
+  if (cardTrigger && document.contains(cardTrigger)) cardTrigger.focus();
+  activeWord = "";
+  cardTrigger = null;
+}
+
+function collectWord(word, displayWord, trigger) {
+  if (!vocabulary[word]) {
+    vocabulary[word] = { word: displayWord.toLocaleLowerCase("en-US"), meaning: "", phonetic: "", example: "" };
+    saveDraft();
+    renderVocabulary();
+  }
+  openWordCard(word, trigger);
 }
 
 function clearValidation(input, errorElement) {
@@ -81,10 +189,11 @@ function closeTranslation() {
 function showReader() {
   const draft = getDraft();
   readerTitle.textContent = draft.title.trim();
-  readerEnglish.textContent = draft.english.trim();
+  renderEnglish(draft.english.trim());
   readerTranslation.textContent = draft.chinese.trim();
   translationSection.hidden = !draft.chinese.trim();
   closeTranslation();
+  renderVocabulary();
 
   editorView.hidden = true;
   readerView.hidden = false;
@@ -93,11 +202,84 @@ function showReader() {
 }
 
 function showEditor() {
+  closeWordCard();
   readerView.hidden = true;
   editorView.hidden = false;
   window.scrollTo({ top: 0, behavior: "smooth" });
   titleInput.focus({ preventScroll: true });
 }
+
+readerEnglish.addEventListener("click", (event) => {
+  const token = event.target.closest(".word-token");
+  if (!token) return;
+  collectWord(token.dataset.word, token.textContent, token);
+});
+
+vocabularyToggle.addEventListener("click", () => {
+  const willExpand = vocabularyList.hidden;
+  vocabularyList.hidden = !willExpand;
+  vocabularyToggle.setAttribute("aria-expanded", String(willExpand));
+});
+
+vocabularyItems.addEventListener("click", (event) => {
+  const item = event.target.closest(".vocabulary-item");
+  if (item) openWordCard(item.dataset.word, item);
+});
+
+wordCardForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!activeWord || !vocabulary[activeWord]) return;
+  vocabulary[activeWord] = {
+    ...vocabulary[activeWord],
+    meaning: wordMeaning.value.trim(),
+    phonetic: wordPhonetic.value.trim(),
+    example: wordExample.value.trim(),
+  };
+  saveDraft();
+  renderVocabulary();
+  wordCardStatus.textContent = "已保存到此设备";
+});
+
+deleteWord.addEventListener("click", () => {
+  if (!activeWord) return;
+  delete vocabulary[activeWord];
+  saveDraft();
+  renderVocabulary();
+  closeWordCard();
+});
+
+speakWord.addEventListener("click", () => {
+  if (!activeWord || !("speechSynthesis" in window)) {
+    wordCardStatus.textContent = "当前浏览器不支持系统朗读。";
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(vocabulary[activeWord].word || activeWord);
+  utterance.lang = "en-US";
+  const voices = window.speechSynthesis.getVoices();
+  utterance.voice = voices.find((voice) => voice.lang === "en-US")
+    || voices.find((voice) => voice.lang === "en-GB")
+    || voices.find((voice) => voice.lang.startsWith("en"))
+    || null;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+});
+
+wordCardClose.addEventListener("click", closeWordCard);
+wordCardBackdrop.addEventListener("click", closeWordCard);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !wordCard.hidden) closeWordCard();
+  if (event.key !== "Tab" || wordCard.hidden) return;
+  const focusable = [...wordCard.querySelectorAll("button, input, textarea")];
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
 
 articleForm.addEventListener("input", (event) => {
   saveDraft();

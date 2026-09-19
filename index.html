@@ -87,8 +87,28 @@
             <span aria-hidden="true">←</span>
             返回编辑
           </button>
-          <span class="reading-label">专注阅读</span>
+          <div class="reader-actions">
+            <span class="reading-label">专注阅读</span>
+            <button
+              id="vocabularyToggle"
+              class="vocabulary-toggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="vocabularyList"
+            >
+              生词表 <span id="vocabularyCount" class="vocabulary-count">0</span>
+            </button>
+          </div>
         </nav>
+
+        <section id="vocabularyList" class="vocabulary-list" aria-label="当前文章生词表" hidden>
+          <div class="vocabulary-list-header">
+            <h2>当前文章的生词</h2>
+            <span id="vocabularySummary">共 0 个</span>
+          </div>
+          <div id="vocabularyItems" class="vocabulary-items"></div>
+          <p id="vocabularyEmpty" class="vocabulary-empty">点击文章中的英文单词，把它加入这里。</p>
+        </section>
 
         <article class="article-card">
           <header class="article-header">
@@ -115,6 +135,48 @@
         </article>
       </section>
     </main>
+
+    <div id="wordCardBackdrop" class="word-card-backdrop" hidden></div>
+    <aside
+      id="wordCard"
+      class="word-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="wordCardTitle"
+      hidden
+    >
+      <div class="word-card-handle" aria-hidden="true"></div>
+      <header class="word-card-header">
+        <div>
+          <p class="eyebrow">WORD CARD</p>
+          <h2 id="wordCardTitle"></h2>
+        </div>
+        <button id="wordCardClose" class="icon-button" type="button" aria-label="关闭生词卡">×</button>
+      </header>
+
+      <form id="wordCardForm" class="word-card-form">
+        <div class="field">
+          <label for="wordMeaning">中文释义</label>
+          <input id="wordMeaning" type="text" autocomplete="off" placeholder="输入中文释义" />
+        </div>
+        <div class="field">
+          <label for="wordPhonetic">音标</label>
+          <input id="wordPhonetic" type="text" autocomplete="off" placeholder="例如 /ˈriːdɪŋ/" />
+        </div>
+        <div class="field">
+          <label for="wordExample">例句</label>
+          <textarea id="wordExample" rows="4" placeholder="输入包含这个单词的例句"></textarea>
+        </div>
+        <p id="wordCardStatus" class="word-card-status" role="status" aria-live="polite"></p>
+        <div class="word-card-actions">
+          <button id="speakWord" class="secondary-button" type="button" aria-label="朗读当前英文单词">
+            <span aria-hidden="true">◖</span> 朗读
+          </button>
+          <button class="primary-button" type="submit">保存</button>
+        </div>
+        <button id="deleteWord" class="delete-button" type="button">从生词表删除</button>
+      </form>
+    </aside>
 
     <footer>
       <p>Read slowly. Think deeply.</p>
