@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f7fb" />
+    <meta
+      name="description"
+      content="英语语境阅读器——在安静、清晰的页面中专注阅读英文文章。"
+    />
+    <title>英语语境阅读器</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="英语语境阅读器首页">
+        <span class="brand-mark" aria-hidden="true">E</span>
+        <span>英语语境阅读器</span>
+      </a>
+      <p class="header-note">READ IN CONTEXT</p>
+    </header>
+
+    <main>
+      <section id="editorView" class="editor-view" aria-labelledby="pageTitle">
+        <div class="intro">
+          <p class="eyebrow">YOUR READING SPACE</p>
+          <h1 id="pageTitle">英语语境阅读器</h1>
+          <p class="intro-copy">粘贴一篇英文文章，留出一段安静的时间，在语境中开始阅读。</p>
+        </div>
+
+        <form id="articleForm" class="editor-card" novalidate>
+          <div class="field field-title">
+            <label for="articleTitle">文章标题</label>
+            <input
+              id="articleTitle"
+              name="articleTitle"
+              type="text"
+              placeholder="例如：The Joy of Reading"
+              autocomplete="off"
+              required
+            />
+            <p class="field-error" id="titleError" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label for="englishText">英文原文</label>
+              <span>必填</span>
+            </div>
+            <textarea
+              id="englishText"
+              name="englishText"
+              rows="11"
+              placeholder="Paste your English article here..."
+              spellcheck="true"
+              required
+            ></textarea>
+            <p class="field-error" id="englishError" aria-live="polite"></p>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label for="chineseText">中文全文翻译</label>
+              <span>选填</span>
+            </div>
+            <textarea
+              id="chineseText"
+              name="chineseText"
+              rows="7"
+              placeholder="可以在这里粘贴中文翻译，阅读时按需展开。"
+            ></textarea>
+          </div>
+
+          <div class="form-footer">
+            <p><span class="save-dot" aria-hidden="true"></span>内容会自动保存在此设备</p>
+            <button class="primary-button" type="submit">
+              创建阅读
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section id="readerView" class="reader-view" aria-labelledby="readerTitle" hidden>
+        <nav class="reader-nav" aria-label="阅读操作">
+          <button id="backButton" class="back-button" type="button">
+            <span aria-hidden="true">←</span>
+            返回编辑
+          </button>
+          <span class="reading-label">专注阅读</span>
+        </nav>
+
+        <article class="article-card">
+          <header class="article-header">
+            <p class="eyebrow">ENGLISH ARTICLE</p>
+            <h1 id="readerTitle"></h1>
+            <div class="title-rule" aria-hidden="true"></div>
+          </header>
+
+          <div id="readerEnglish" class="article-body" lang="en"></div>
+
+          <div id="translationSection" class="translation-section" hidden>
+            <button
+              id="translationToggle"
+              class="translation-toggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="readerTranslation"
+            >
+              <span id="translationToggleText">展开全文翻译</span>
+              <span class="chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div id="readerTranslation" class="translation-body" lang="zh-CN" hidden></div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <p>Read slowly. Think deeply.</p>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
