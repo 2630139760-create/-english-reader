@@ -19,6 +19,7 @@
       </a>
       <div class="header-tools">
         <p class="header-note">READ IN CONTEXT</p>
+        <button id="dataManagementButton" class="secondary-button compact-button" type="button" aria-label="打开数据管理">数据管理</button>
         <button id="libraryButton" class="secondary-button compact-button" type="button" aria-label="打开文章库">文章库</button>
       </div>
     </header>
@@ -284,6 +285,40 @@
         <div id="articleVocabularyItems" class="vocabulary-items"></div>
         <p id="articleVocabularyEmpty" class="vocabulary-empty">本篇还没有收藏词汇。</p>
       </section>
+    </aside>
+
+    <div id="dataBackdrop" class="word-card-backdrop" hidden></div>
+    <aside id="dataPanel" class="library-panel data-panel" role="dialog" aria-modal="true" aria-labelledby="dataPanelTitle" hidden>
+      <header class="word-card-header">
+        <div><p class="eyebrow">BACKUP &amp; RESTORE</p><h2 id="dataPanelTitle">数据管理</h2></div>
+        <button id="dataPanelClose" class="icon-button" type="button" aria-label="关闭数据管理">×</button>
+      </header>
+      <div id="dataStats" class="data-stats" aria-label="当前数据统计"></div>
+      <p class="data-time">最近成功导出：<span id="lastExportTime">暂无</span></p>
+      <p class="data-time">最近成功导入：<span id="lastImportTime">暂无</span></p>
+      <div class="data-actions">
+        <button id="exportDataButton" class="primary-button" type="button" aria-label="导出全部应用数据为 JSON 文件">导出全部数据</button>
+        <button id="copyBackupButton" class="secondary-button" type="button" aria-label="复制完整备份 JSON">复制备份 JSON</button>
+        <label class="secondary-button file-button" for="backupFile">从设备选择备份</label>
+        <input id="backupFile" class="visually-hidden" type="file" accept="application/json,.json" aria-label="选择 JSON 备份文件" />
+      </div>
+      <div class="field data-import-field">
+        <label for="backupText">粘贴备份 JSON</label>
+        <textarea id="backupText" rows="7" spellcheck="false" placeholder="在此粘贴完整备份 JSON"></textarea>
+      </div>
+      <button id="previewBackupButton" class="secondary-button" type="button" aria-label="验证并预览粘贴的备份">验证并预览</button>
+      <section id="backupPreview" class="backup-preview" aria-labelledby="backupPreviewTitle" hidden>
+        <h3 id="backupPreviewTitle">导入预览</h3>
+        <div id="backupPreviewDetails"></div>
+        <fieldset class="import-mode">
+          <legend>导入方式</legend>
+          <label><input type="radio" name="importMode" value="merge" checked /> 合并导入（推荐，不删除当前数据）</label>
+          <label><input type="radio" name="importMode" value="replace" /> 覆盖导入（将备份替换当前应用数据）</label>
+        </fieldset>
+        <button id="confirmImportButton" class="primary-button" type="button" aria-label="按选择的方式确认导入备份">确认导入</button>
+      </section>
+      <button id="undoImportButton" class="delete-button" type="button" aria-label="撤销最近一次导入" hidden>撤销最近一次导入</button>
+      <p id="dataStatus" class="import-status" role="status" aria-live="polite"></p>
     </aside>
 
     <footer>
