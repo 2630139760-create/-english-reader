@@ -10,7 +10,7 @@ class El {
   setAttribute(k,v){this.attrs[k]=String(v)} removeAttribute(k){delete this.attrs[k]} getAttribute(k){return this.attrs[k]}
   append(x){if(x?.fragment)this.children.push(...x.children);else this.children.push(x)} replaceChildren(...x){this.children=[];x.forEach(v=>this.append(v))}
   addEventListener(t,f){(this.listeners[t]??=[]).push(f)} dispatch(t,p={}){const e={target:this,preventDefault(){},key:'',...p};for(const f of this.listeners[t]||[])f(e)} focus(){document.activeElement=this}
-  closest(sel){if(sel.startsWith('.')&&this.classList.contains(sel.slice(1)))return this;if(sel==='button[data-action]'&&this.tagName==='BUTTON'&&this.dataset.action)return this;if(sel==='button[data-filter]'&&this.tagName==='BUTTON'&&this.dataset.filter)return this;return null}
+  closest(sel){if(sel.startsWith('.')&&this.classList.contains(sel.slice(1)))return this;if(sel==='button[data-action]'&&this.tagName==='BUTTON'&&this.dataset.action)return this;if(sel==='button[data-filter]'&&this.tagName==='BUTTON'&&this.dataset.filter)return this;if(sel==='button[data-status]'&&this.tagName==='BUTTON'&&this.dataset.status)return this;if(sel==='button[data-review-result]'&&this.tagName==='BUTTON'&&this.dataset.reviewResult)return this;return null}
   querySelectorAll(sel){const out=[];const walk=n=>{if(!n?.classList)return;if(sel==='.word-token'&&n.classList.contains('word-token'))out.push(n);if(sel==='.word-token.is-selected'&&n.classList.contains('word-token')&&n.classList.contains('is-selected'))out.push(n);if(sel==='button'&&n.tagName==='BUTTON')out.push(n);n.children.forEach(walk)};this.children.forEach(walk);return out}
   querySelector(sel){const m=sel.match(/\[data-index="(\d+)"\]/);return m?this.children.find(x=>x.dataset.index===m[1]):null}
 }
@@ -22,7 +22,8 @@ for(const id of ['articleForm','wordCardForm'])map['#'+id].tagName='FORM';
 for(const id of ['wordCard','wordCardBackdrop','readerView','libraryPanel','libraryBackdrop','articleVocabulary','dataPanel','dataBackdrop','backupPreview'])map['#'+id].hidden=true;
 for(const filter of ['all','word','phrase']){const b=new El('button');b.dataset.filter=filter;map['#vocabularyFilters'].append(b);const c=new El('button');c.dataset.filter=filter;map['#articleVocabularyFilters'].append(c)}
 let selectedImportMode='merge';
-const document={activeElement:null,body:new El('body'),querySelector:s=>s==='input[name="importMode"]:checked'?{value:selectedImportMode}:map[s],createElement:t=>new El(t),createTextNode:t=>({textContent:t,nodeType:3}),createDocumentFragment(){const x=new El();x.fragment=true;return x},contains:()=>true,listeners:{},addEventListener(t,f){(this.listeners[t]??=[]).push(f)}};
+const selectedReview={reviewType:'all',reviewStatus:'all',reviewLimit:'10',reviewOrder:'created'};
+const document={activeElement:null,body:new El('body'),querySelector:s=>{if(s==='input[name="importMode"]:checked')return {value:selectedImportMode};const match=s.match(/^input\[name=\"(reviewType|reviewStatus|reviewLimit|reviewOrder)\"\]:checked$/);return match?{value:selectedReview[match[1]]}:map[s]},createElement:t=>new El(t),createTextNode:t=>({textContent:t,nodeType:3}),createDocumentFragment(){const x=new El();x.fragment=true;return x},contains:()=>true,listeners:{},addEventListener(t,f){(this.listeners[t]??=[]).push(f)}};
 const legacy={articleTitle:'Legacy unit',original:{title:'Legacy English',english:'Keep  spaces. A well-known writer can\'t stop now.\n\nSecond paragraph.',chineseTitle:'旧标题',chinese:'旧翻译'},scenes:[{title:'Legacy scene',english:'Keep this scene.',chineseTitle:'旧场景',chinese:'场景翻译'}],vocabulary:{keep:{word:'Keep',meaning:'保留'}}};
 const store={'english-context-reader-draft':JSON.stringify(legacy)};
 const localStorage={getItem:k=>store[k]??null,setItem:(k,v)=>store[k]=v,removeItem:k=>delete store[k]};
@@ -42,7 +43,7 @@ assert.ok(css.match(/\.reader-actions\s*\{[^}]*flex-wrap:\s*wrap/s),'reader acti
 for(const id of ['editorLibraryButton','editorNewArticleButton','readerLibraryButton','phraseModeButton','vocabularyToggle'])assert.ok((map['#'+id].listeners.click||[]).length,`${id} must bind a click event`);
 
 // Legacy migration retains article, scene, translation and vocabulary without deleting the old key.
-assert.equal(saved().articles.length,1);assert.equal(saved().articles[0].scenes[0].chinese,'场景翻译');assert.equal(saved().articles[0].original.chinese,'旧翻译');assert.equal(saved().vocabulary['word:keep'].meaning,'保留');assert.ok(store['english-context-reader-draft']);
+assert.equal(saved().articles.length,1);assert.equal(saved().articles[0].scenes[0].chinese,'场景翻译');assert.equal(saved().articles[0].original.chinese,'旧翻译');assert.equal(saved().vocabulary['word:keep'].meaning,'保留');assert.equal(saved().vocabulary['word:keep'].reviewStatus,'unfamiliar');assert.equal(saved().vocabulary['word:keep'].reviewCount,0);assert.equal(saved().vocabulary['word:keep'].lastReviewedAt,null);assert.ok(store['english-context-reader-draft']);
 
 function payload(id,title='Imported unit'){return {id,articleTitle:title,original:{title:'Original title',english:"Hello, brave new-world can't wait.\n\nAnother paragraph.",chineseTitle:'原标题',chinese:'原译'},scenes:[{title:'Scene 1',english:"Brave new-world can't wait here.",chineseTitle:'场景一',chinese:'译文'}]}}
 // Import creates a second unit rather than replacing the legacy one.
@@ -149,5 +150,31 @@ map['#backupText'].value=JSON.stringify({version:4,currentId:'old',articles:[{id
 // Replace is double-confirmed, fully restores the backup, and undo is double-confirmed and restores the pre-import snapshot.
 const preReplace=store['english-context-reader-library-v4'];map['#backupText'].value=JSON.stringify(incomingBackup);map['#previewBackupButton'].dispatch('click');selectedImportMode='replace';confirms=[true,true];map['#confirmImportButton'].dispatch('click');assert.equal(saved().articles.length,3);assert.equal(saved().articles.find(x=>x.id==='incoming-1').lastContentIndex,1);assert.ok(store['english-context-reader-import-snapshot-v1']);
 confirms=[true,true];map['#undoImportButton'].dispatch('click');assert.equal(store['english-context-reader-library-v4'],preReplace);assert.ok(!store['english-context-reader-import-snapshot-v1']);
+
+
+// Phase-six visible review controls open a real setup and both words and phrases enter a snapshot queue.
+for(const id of ['startReviewButton','reviewArticleButton','beginReviewButton','reviewCard','reviewSpeak','showReviewAnswer','reviewUndo','reviewExit'])assert.ok(ids.includes(id)&&Object.values(map['#'+id].listeners).some(x=>x.length),`${id} must be visible and interactive`);
+map['#startReviewButton'].dispatch('click');assert.equal(map['#reviewPanel'].hidden,false);assert.ok(map['#reviewScopeLabel'].textContent.includes('全部文章'));
+selectedReview.reviewLimit='all';selectedReview.reviewOrder='created';map['#reviewSetup'].dispatch('change');assert.ok(map['#reviewMatchCount'].textContent.includes('符合当前条件'));
+map['#beginReviewButton'].dispatch('click');assert.equal(map['#reviewSession'].hidden,false);const initialQueue=[...context.reviewSnapshot().queue];assert.ok(initialQueue.some(key=>key.startsWith('word:'))&&initialQueue.some(key=>key.startsWith('phrase:')));
+// The front leaks no Chinese; revealing displays only available fields and all source contexts.
+assert.equal(map['#reviewAnswer'].hidden,true);assert.ok(!map['#reviewWord'].textContent.includes('释义'));map['#showReviewAnswer'].dispatch('click');assert.equal(map['#reviewAnswer'].hidden,false);assert.ok(map['#reviewAnswer'].textContent.includes('中文释义：'));
+// Native speech is explicitly invoked and cancels any prior utterance.
+let cancelled=0,spoken=0;window.speechSynthesis.cancel=()=>cancelled++;window.speechSynthesis.speak=()=>spoken++;map['#reviewSpeak'].dispatch('click');assert.equal(cancelled,1);assert.equal(spoken,1);
+// Status persists, advances without mutating the queue, and undo restores the exact prior record and position.
+const resultButton=new El('button');resultButton.dataset.reviewResult='learning';map['#reviewStatusActions'].append(resultButton);const reviewedKey=context.reviewSnapshot().queue[context.reviewSnapshot().index],beforeReview=saved().vocabulary[reviewedKey],beforeIndex=context.reviewSnapshot().index;
+map['#reviewStatusActions'].dispatch('click',{target:resultButton});assert.deepEqual(context.reviewSnapshot().queue,initialQueue);assert.equal(saved().vocabulary[reviewedKey].reviewStatus,'learning');assert.equal(saved().vocabulary[reviewedKey].reviewCount,beforeReview.reviewCount+1);assert.ok(saved().vocabulary[reviewedKey].lastReviewedAt);assert.equal(context.reviewSnapshot().index,beforeIndex+1);
+map['#reviewUndo'].dispatch('click');assert.equal(context.reviewSnapshot().index,beforeIndex);assert.equal(saved().vocabulary[reviewedKey].reviewStatus,beforeReview.reviewStatus);assert.equal(saved().vocabulary[reviewedKey].reviewCount,beforeReview.reviewCount);
+// Combined filters and each quantity limit are enforced by the queue builder.
+selectedReview.reviewType='word';selectedReview.reviewStatus='unfamiliar';assert.ok(context.matchingReviewKeys().every(key=>key.startsWith('word:')&&saved().vocabulary[key].reviewStatus==='unfamiliar'));
+selectedReview.reviewType='all';selectedReview.reviewStatus='all';for(const limit of ['10','20','all']){selectedReview.reviewLimit=limit;context.startReview();const ceiling=limit==='all'?Infinity:Number(limit);assert.ok(context.reviewSnapshot().queue.length<=ceiling)}
+// Per-article entry scopes the queue to that article and exiting keeps completed state.
+const articleWithVocabulary=saved().articles.find(article=>Object.values(saved().vocabulary).some(entry=>entry.sources.some(source=>source.articleId===article.id)));if(articleWithVocabulary){context.openReview(articleWithVocabulary.id,map['#reviewArticleButton']);context.startReview();assert.ok(context.reviewSnapshot().queue.every(key=>saved().vocabulary[key].sources.some(source=>source.articleId===articleWithVocabulary.id)));}
+// Completing every card produces a visible, type-aware round summary.
+context.openReview(null,map['#startReviewButton']);selectedReview.reviewLimit='10';selectedReview.reviewType='all';selectedReview.reviewStatus='all';context.startReview();while(!map['#reviewSession'].hidden){map['#showReviewAnswer'].dispatch('click');map['#reviewStatusActions'].dispatch('click',{target:resultButton});}assert.equal(map['#reviewComplete'].hidden,false);assert.ok(map['#reviewSummary'].textContent.includes('本轮复习总数：')&&map['#reviewSummary'].textContent.includes('单词：')&&map['#reviewSummary'].textContent.includes('短语：'));
+map['#reviewExit'].dispatch('click');assert.equal(map['#reviewPanel'].hidden,true);
+// Review fields are exported and normalized through replace/merge, with one global record per canonical key.
+const phaseSixExport=JSON.parse(context.backupJSON());assert.ok(Object.values(phaseSixExport.data.library.vocabulary).every(entry=>'reviewStatus'in entry&&'reviewCount'in entry&&'lastReviewedAt'in entry&&'lastReviewResult'in entry));
+const localReview=saved().vocabulary[Object.keys(saved().vocabulary)[0]];const mergeProbe=context.validateLibrary({version:5,currentId:saved().currentId,articles:[],vocabulary:{[Object.keys(saved().vocabulary)[0]]:{...localReview,reviewStatus:'mastered',reviewCount:99,lastReviewedAt:'2099-01-01T00:00:00.000Z',lastReviewResult:'mastered'}}});const mergedReview=context.mergeLibrary(mergeProbe).result.vocabulary[Object.keys(saved().vocabulary)[0]];assert.equal(mergedReview.reviewStatus,'mastered');assert.equal(mergedReview.reviewCount,99);
 
 console.log('Passed: legacy migration; UI behavior; complete backup; JSON/file preview; safe merge/deduplication; old-data migration; replace/undo; 1/3/5 scenes; progress restoration');
