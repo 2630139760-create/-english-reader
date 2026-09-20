@@ -110,12 +110,13 @@
           </div>
 
           <details class="import-panel">
-            <summary>从 ChatGPT 导入场景内容</summary>
+            <summary>从 ChatGPT 导入场景与词汇资料</summary>
             <div class="import-panel-body">
               <p class="format-help">
                 请粘贴 JSON：包含 <code>articleTitle</code>、<code>original</code>，以及 1～5 项
                 <code>scenes</code>。每篇内容必须包含英文标题 <code>title</code> 和英文正文
-                <code>english</code>；<code>chineseTitle</code> 与 <code>chinese</code> 可以为空。
+                <code>english</code>；<code>chineseTitle</code> 与 <code>chinese</code> 可以为空。还可包含
+                <code>vocabulary</code>，一次补齐本篇已收藏词汇的释义、用法和双例句。
                 导入只保存在本设备，不会连接任何 API。
               </p>
               <label class="visually-hidden" for="importText">场景内容 JSON</label>
@@ -126,10 +127,21 @@
                 spellcheck="false"
               ></textarea>
               <p id="importStatus" class="import-status" role="status" aria-live="polite"></p>
+              <section id="contentImportPreview" class="backup-preview" aria-label="内容导入预览" hidden>
+                <h3>导入预览</h3>
+                <p id="contentImportPreviewDetails"></p>
+                <fieldset class="import-mode">
+                  <legend>目标学习单元</legend>
+                  <label><input type="radio" name="contentImportMode" value="current" checked /> 更新当前学习单元（推荐，不创建重复文章）</label>
+                  <label><input type="radio" name="contentImportMode" value="new" /> 导入为新学习单元</label>
+                </fieldset>
+                <label><input id="contentImportOverwrite" type="checkbox" /> 用导入值更新预览中列出的已有非空资料冲突</label>
+              </section>
               <p id="sceneSummary" class="scene-summary">当前没有场景文章</p>
               <div class="import-actions">
                 <button id="editorCopyGptButton" class="secondary-button" type="button" aria-haspopup="dialog">复制给 GPT</button>
-                <button id="importButton" class="primary-button" type="button" aria-label="导入为新的学习单元">导入内容</button>
+                <button id="previewContentImportButton" class="secondary-button" type="button">验证并预览</button>
+                <button id="importButton" class="primary-button" type="button" disabled>确认导入</button>
                 <button id="clearImportButton" class="secondary-button" type="button" aria-label="清空 JSON 输入">清空输入</button>
               </div>
             </div>
@@ -263,14 +275,21 @@
           <label for="wordSource">来源原句</label>
           <textarea id="wordSource" rows="3" placeholder="来源原句（可修改）"></textarea>
         </div>
+        <div class="field"><label for="wordPartOfSpeech">词性或短语类型</label><input id="wordPartOfSpeech" type="text" autocomplete="off" placeholder="例如 noun / 动词短语" /></div>
         <div class="field">
           <label for="wordPhonetic">音标</label>
           <input id="wordPhonetic" type="text" autocomplete="off" placeholder="例如 /ˈriːdɪŋ/" />
         </div>
         <div class="field">
-          <label for="wordExample">例句</label>
-          <textarea id="wordExample" rows="4" placeholder="输入包含这个单词的例句"></textarea>
+          <label for="wordUsageNote">用法注释</label>
+          <textarea id="wordUsageNote" rows="3" placeholder="简短中文用法注释"></textarea>
         </div>
+        <div class="field"><label for="wordExample">例句 1（英文）</label><textarea id="wordExample" rows="2"></textarea></div>
+        <div class="field"><label for="wordExampleChinese">例句 1（中文）</label><textarea id="wordExampleChinese" rows="2"></textarea></div>
+        <div class="field"><label for="wordExample2">例句 2（英文）</label><textarea id="wordExample2" rows="2"></textarea></div>
+        <div class="field"><label for="wordExample2Chinese">例句 2（中文）</label><textarea id="wordExample2Chinese" rows="2"></textarea></div>
+        <label class="confirmation-flag"><input id="wordNeedsConfirmation" type="checkbox" /> 选词或含义待确认</label>
+        <div class="field"><label for="wordConfirmationNote">待确认原因</label><input id="wordConfirmationNote" type="text" autocomplete="off" /></div>
         <p id="wordCardStatus" class="word-card-status" role="status" aria-live="polite"></p>
         <div class="word-card-actions">
           <button id="speakWord" class="secondary-button" type="button" aria-label="朗读当前单词或短语">
