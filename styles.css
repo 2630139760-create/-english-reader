@@ -680,6 +680,25 @@ textarea:focus {
   backdrop-filter: blur(2px);
 }
 
+.ocr-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.ocr-entry span, .ocr-picker span, .ocr-result p { color: var(--muted); font-size: 13px; }
+.ocr-modal { position: fixed; z-index: 40; inset: 0; isolation: isolate; }
+.ocr-backdrop { position: absolute; z-index: 0; inset: 0; background: rgba(17,29,48,.5); }
+.ocr-panel { position: absolute; z-index: 1; inset: 3vh max(18px, calc((100vw - 960px) / 2)); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 28px; border: 1px solid var(--line); border-radius: 18px; background: white; box-shadow: 0 24px 70px rgba(23,35,56,.24); }
+.ocr-panel h2 { margin: 8px 0 0; font-family: Georgia, serif; font-size: clamp(25px, 4vw, 34px); font-weight: 500; }
+.ocr-picker, .ocr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 18px 0; }
+.ocr-panel progress { width: 100%; height: 10px; accent-color: var(--blue); }
+.ocr-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin-top: 18px; }
+.ocr-preview { min-width: 0; margin: 0; }
+.ocr-preview figcaption, .ocr-result label { display: block; margin-bottom: 9px; font-weight: 700; }
+.ocr-preview a { display: grid; max-height: 52vh; overflow: auto; border: 1px solid var(--line); border-radius: 12px; background: #eef2f7; place-items: start center; touch-action: pinch-zoom; }
+.ocr-preview img { display: block; max-width: 100%; height: auto; object-fit: contain; }
+.ocr-result { min-width: 0; margin: 0; }
+.ocr-result textarea { min-height: 300px; resize: vertical; font-family: Georgia, serif; line-height: 1.65; }
+.ocr-actions { position: sticky; bottom: -28px; margin-bottom: -28px; padding: 14px 0 28px; background: linear-gradient(transparent, white 15%); }
+.ocr-actions button, .ocr-actions label { min-height: 46px; }
+body.panel-open { overflow: hidden; }
+
 .gpt-copy-panel {
   position: fixed;
   z-index: 31;
@@ -997,6 +1016,11 @@ footer {
   .review-actions > *, .review-navigation > *, .review-complete-actions > * { width: 100%; }
   .gpt-copy-panel { inset: 0; padding: 20px 14px; border-radius: 0; }
   .gpt-copy-settings { grid-template-columns: 1fr; }
+  .ocr-panel { inset: 0; padding: 18px 14px; border-radius: 0; }
+  .ocr-workspace { grid-template-columns: 1fr; }
+  .ocr-preview a { max-height: 38vh; }
+  .ocr-actions { bottom: -18px; margin-bottom: -18px; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+  .ocr-actions > * { flex: 1 1 140px; }
 
   main {
     width: min(100% - 24px, 1120px);
