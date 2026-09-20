@@ -110,13 +110,14 @@
           </div>
 
           <details class="import-panel">
-            <summary>从 ChatGPT 导入场景与词汇资料</summary>
+            <summary>从 GPT 导入学习内容或词汇资料</summary>
             <div class="import-panel-body">
               <p class="format-help">
                 请粘贴 JSON：包含 <code>articleTitle</code>、<code>original</code>，以及 1～5 项
                 <code>scenes</code>。每篇内容必须包含英文标题 <code>title</code> 和英文正文
                 <code>english</code>；<code>chineseTitle</code> 与 <code>chinese</code> 可以为空。还可包含
-                <code>vocabulary</code>，一次补齐本篇已收藏词汇的释义、用法和双例句。
+                <code>vocabulary</code>，一次补齐本篇已收藏词汇的释义、用法和双例句。也可粘贴
+                <code>task: "vocabularySupplement"</code> 的独立词汇补充 JSON；它只更新当前学习单元中已收藏的匹配项，不改动文章、场景、阅读或复习数据。
                 导入只保存在本设备，不会连接任何 API。
               </p>
               <label class="visually-hidden" for="importText">场景内容 JSON</label>
@@ -130,7 +131,7 @@
               <section id="contentImportPreview" class="backup-preview" aria-label="内容导入预览" hidden>
                 <h3>导入预览</h3>
                 <p id="contentImportPreviewDetails"></p>
-                <fieldset class="import-mode">
+                <fieldset id="contentImportTargetOptions" class="import-mode">
                   <legend>目标学习单元</legend>
                   <label><input type="radio" name="contentImportMode" value="current" checked /> 更新当前学习单元（推荐，不创建重复文章）</label>
                   <label><input type="radio" name="contentImportMode" value="new" /> 导入为新学习单元</label>
@@ -236,11 +237,20 @@
         <button id="gptCopyClose" class="icon-button" type="button" aria-label="关闭复制给 GPT 面板">×</button>
       </header>
       <p class="format-help">自动使用当前学习单元的原文与本篇已收藏词汇，不会发送数据或改变学习状态。</p>
-      <div class="gpt-copy-settings">
+      <fieldset class="gpt-mode-picker">
+        <legend>工作步骤</legend>
+        <label><input id="gptModeGenerate" type="radio" name="gptMode" value="generate" checked /> 1. 生成翻译与场景</label>
+        <label><input id="gptModeVocabulary" type="radio" name="gptMode" value="vocabulary" /> 2. 补充词汇资料</label>
+      </fieldset>
+      <div id="gptGenerationSettings" class="gpt-copy-settings">
         <div class="field"><label for="gptSceneCount">场景数量</label><select id="gptSceneCount" aria-label="场景数量"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option></select></div>
         <div class="field"><label for="gptDifficulty">难度</label><input id="gptDifficulty" type="text" value="初学者，短句和常见词" /></div>
         <div class="field"><label for="gptLength">每篇长度</label><input id="gptLength" type="text" value="80～120个英文单词" /></div>
       </div>
+      <section id="gptVocabularySelection" class="gpt-vocabulary-selection" aria-label="选择要补充资料的词汇" hidden>
+        <p class="format-help">默认勾选资料不完整的项目；也可勾选已有资料的词汇重新生成。</p>
+        <div id="gptVocabularyChoices" class="gpt-vocabulary-choices"></div>
+      </section>
       <div class="field"><label for="gptExtra">额外要求 <span>选填</span></label><textarea id="gptExtra" rows="3"></textarea></div>
       <p id="gptVocabularyNotice" class="import-status" role="status"></p>
       <div class="field"><label for="gptPromptPreview">完整文本预览</label><textarea id="gptPromptPreview" class="gpt-prompt-preview" rows="18" readonly spellcheck="false"></textarea></div>

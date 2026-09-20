@@ -13,7 +13,7 @@ class El {
   append(x){if(x?.fragment)this.children.push(...x.children);else this.children.push(x)} replaceChildren(...x){this.children=[];x.forEach(v=>this.append(v))}
   addEventListener(t,f){(this.listeners[t]??=[]).push(f)} dispatch(t,p={}){const e={target:this,preventDefault(){},key:'',...p};for(const f of this.listeners[t]||[])f(e)} focus(){document.activeElement=this}
   closest(sel){if(sel.startsWith('.')&&this.classList.contains(sel.slice(1)))return this;if(sel==='button[data-action]'&&this.tagName==='BUTTON'&&this.dataset.action)return this;if(sel==='button[data-filter]'&&this.tagName==='BUTTON'&&this.dataset.filter)return this;if(sel==='button[data-status]'&&this.tagName==='BUTTON'&&this.dataset.status)return this;if(sel==='button[data-review-result]'&&this.tagName==='BUTTON'&&this.dataset.reviewResult)return this;return null}
-  querySelectorAll(sel){const out=[];const walk=n=>{if(!n?.classList)return;if(sel==='.word-token'&&n.classList.contains('word-token'))out.push(n);if(sel==='.word-token.is-selected'&&n.classList.contains('word-token')&&n.classList.contains('is-selected'))out.push(n);if(sel==='button'&&n.tagName==='BUTTON')out.push(n);n.children.forEach(walk)};this.children.forEach(walk);return out}
+  querySelectorAll(sel){const out=[];const walk=n=>{if(!n?.classList)return;if(sel==='.word-token'&&n.classList.contains('word-token'))out.push(n);if(sel==='.word-token.is-selected'&&n.classList.contains('word-token')&&n.classList.contains('is-selected'))out.push(n);if(sel==='button'&&n.tagName==='BUTTON')out.push(n);if(sel==='input'&&n.tagName==='INPUT')out.push(n);n.children.forEach(walk)};this.children.forEach(walk);return out}
   querySelector(sel){const m=sel.match(/\[data-index="(\d+)"\]/);return m?this.children.find(x=>x.dataset.index===m[1]):null}
 }
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
@@ -82,10 +82,30 @@ assert.deepEqual(context.normalizeUnit({original:{english:''}}).gptPreferences,{
 
 // Clipboard success is only announced after resolution; failure retains selectable preview and gives manual guidance.
 map['#gptCopyButton'].dispatch('click');await new Promise(resolve=>setImmediate(resolve));assert.equal(navigator.copied,prompt=map['#gptPromptPreview'].value);assert.equal(map['#gptCopyStatus'].textContent,'已复制，前往 GPT 对话粘贴即可');
+// Step two exposes incomplete vocabulary by default and creates a self-contained vocabulary-only prompt.
+map['#gptModeGenerate'].checked=false;map['#gptModeVocabulary'].checked=true;map['#gptModeVocabulary'].dispatch('change');
+const choices=map['#gptVocabularyChoices'].querySelectorAll('input');assert.ok(choices.length>=2&&choices.some(x=>x.checked));
+prompt=map['#gptPromptPreview'].value;assert.ok(prompt.includes('任务类型：仅补充所选词汇资料')&&prompt.includes('vocabularySupplement')&&prompt.includes('不重新生成场景')&&prompt.includes('```')===false);
+assert.ok(prompt.includes('只输出一个标注为 json 的 Markdown 代码块')&&prompt.includes('sourceSentence')&&prompt.includes('needsConfirmation'));
+map['#gptModeGenerate'].checked=true;map['#gptModeVocabulary'].checked=false;map['#gptModeGenerate'].dispatch('change');
+assert.ok(map['#gptPromptPreview'].value.includes('任务类型：生成原文翻译')&&map['#gptPromptPreview'].value.includes('完整英文原文'));
 navigator.clipboard.writeText=async()=>{throw new Error('denied')};map['#gptCopyButton'].dispatch('click');await new Promise(resolve=>setImmediate(resolve));assert.ok(map['#gptCopyStatus'].textContent.includes('手动选择'));
 map['#englishText'].value='';map['#gptCopyButton'].dispatch('click');await Promise.resolve();assert.equal(map['#gptCopyStatus'].textContent,'请先填写英文原文');
 map['#articleTitle'].value='';map['#originalTitle'].value='';map['#englishText'].value=priorEnglish;prompt=context.buildGptPrompt();assert.ok(prompt.includes('未命名学习单元')&&prompt.includes('Untitled Article'));
 map['#articleTitle'].value=priorTitle;map['#originalTitle'].value=priorOriginalTitle;map['#englishText'].value=priorEnglish;map['#gptCopyClose'].dispatch('click');navigator.clipboard.writeText=async text=>{navigator.copied=text};
+
+// Vocabulary-only validation/import is atomic, targets the current unit, and preserves content and progress.
+const supplementItem={term:'Brave',type:'word',meaning:'勇敢的',partOfSpeech:'形容词',phonetic:'/breɪv/',usageNote:'描述面对困难而不退缩。',sourceSentence:"Brave new-world can't wait here.",examples:[{english:'She is brave today.',chinese:'她今天很勇敢。'},{english:'Be brave and speak.',chinese:'勇敢地说出来。'}],needsConfirmation:false,confirmationNote:''};
+const supplement={task:'vocabularySupplement',schemaVersion:1,articleTitle:'Title is informational only',vocabulary:[supplementItem,{...supplementItem,term:'Not collected'}]};
+const beforeSupplement=JSON.stringify(saved().articles.find(x=>x.id==='stable-id')),beforeReviewState=saved().vocabulary['word:brave'].reviewStatus;
+map['#importText'].value=JSON.stringify(supplement);map['#previewContentImportButton'].dispatch('click');assert.ok(map['#contentImportPreviewDetails'].textContent.includes('目标学习单元（以当前选择为准）：Overwritten')&&map['#contentImportPreviewDetails'].textContent.includes('未匹配 1 项'));
+map['#importButton'].dispatch('click');let afterSupplement=saved();assert.equal(JSON.stringify(afterSupplement.articles.find(x=>x.id==='stable-id')),beforeSupplement);assert.equal(afterSupplement.vocabulary['word:brave'].reviewStatus,beforeReviewState);assert.equal(afterSupplement.vocabulary['word:brave'].sources.find(x=>x.articleId==='stable-id').examples.length,2);assert.ok(!afterSupplement.vocabulary['word:not collected']);
+const sourceCount=afterSupplement.vocabulary['word:brave'].sources.length;map['#importText'].value=JSON.stringify({task:'vocabularySupplement',schemaVersion:1,articleTitle:'Again',vocabulary:[supplementItem]});map['#previewContentImportButton'].dispatch('click');map['#importButton'].dispatch('click');assert.equal(saved().vocabulary['word:brave'].sources.length,sourceCount);
+// Non-empty conflicts require explicit overwrite; malformed input performs no partial write.
+const conflicting={...supplementItem,meaning:'无畏的'};map['#importText'].value=JSON.stringify({task:'vocabularySupplement',schemaVersion:1,articleTitle:'Conflict',vocabulary:[conflicting]});map['#previewContentImportButton'].dispatch('click');assert.ok(map['#contentImportPreviewDetails'].textContent.includes('非空冲突字段'));map['#importButton'].dispatch('click');assert.equal(saved().vocabulary['word:brave'].sources.find(x=>x.articleId==='stable-id').meaning,'勇敢的');
+map['#contentImportOverwrite'].checked=true;map['#importText'].value=JSON.stringify({task:'vocabularySupplement',schemaVersion:1,articleTitle:'Conflict',vocabulary:[conflicting]});map['#previewContentImportButton'].dispatch('click');map['#importButton'].dispatch('click');assert.equal(saved().vocabulary['word:brave'].sources.find(x=>x.articleId==='stable-id').meaning,'无畏的');map['#contentImportOverwrite'].checked=false;
+const beforeInvalid=store['english-context-reader-library-v4'];map['#importText'].value=JSON.stringify({task:'vocabularySupplement',schemaVersion:1,articleTitle:'Bad',vocabulary:[{...supplementItem,examples:[]}]});map['#previewContentImportButton'].dispatch('click');assert.equal(store['english-context-reader-library-v4'],beforeInvalid);
+assert.throws(()=>context.parseVocabularySupplement(JSON.stringify({...supplement,schemaVersion:2})),/schemaVersion/);
 
 // All/word/phrase filters show the correct item type.
 const filters=[...map['#vocabularyFilters'].children];map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='phrase')});assert.ok(map['#vocabularyItems'].children.every(x=>x.children[0].textContent.startsWith('短语')));map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='word')});assert.ok(map['#vocabularyItems'].children.every(x=>x.children[0].textContent.startsWith('单词')));

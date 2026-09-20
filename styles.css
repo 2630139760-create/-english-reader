@@ -697,6 +697,12 @@ textarea:focus {
   grid-template-columns: 120px minmax(180px, 1fr) minmax(180px, 1fr);
   gap: 12px;
 }
+.gpt-mode-picker { display:flex; flex-wrap:wrap; gap:10px 22px; margin:14px 0; border:1px solid var(--line); border-radius:10px; }
+.gpt-mode-picker legend { font-weight:700; }
+.gpt-mode-picker input, .gpt-vocabulary-choices input { width:auto; min-height:auto; }
+.gpt-vocabulary-selection { margin:12px 0; }
+.gpt-vocabulary-choices { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; max-height:210px; overflow:auto; padding:4px; }
+.gpt-vocabulary-choices label { display:flex; gap:8px; align-items:flex-start; padding:9px; border:1px solid var(--line); border-radius:8px; }
 
 .gpt-copy-panel select {
   width: 100%;
