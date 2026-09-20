@@ -15,7 +15,7 @@ class Element {
     this.className = ""; this.classList = new ClassList(); this.listeners = {}; this.files = []; this.attributes = {};
   }
   addEventListener(type, handler) { (this.listeners[type] ||= []).push(handler); }
-  dispatch(type, extra = {}) { for (const handler of this.listeners[type] || []) handler({ target: this, currentTarget: this, key: "", ...extra }); }
+  dispatch(type, extra = {}) { for (const handler of this.listeners[type] || []) handler({ target: this, currentTarget: this, key: "", stopPropagation() {}, ...extra }); }
   focus() { document.activeElement = this; }
   setAttribute(name, value) { this.attributes[name] = value; }
   removeAttribute(name) { delete this.attributes[name]; }
@@ -26,7 +26,7 @@ class Element {
 const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 const ids = [...html.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
 const elements = Object.fromEntries(ids.map((id) => [id, new Element(id)]));
-for (const id of ["ocrBackdrop", "ocrPanel", "ocrProgress", "ocrWorkspace", "ocrResultArea", "ocrFill", "ocrFillChoices"]) elements[id].hidden = true;
+for (const id of ["ocrModal", "ocrProgress", "ocrWorkspace", "ocrResultArea", "ocrFill", "ocrFillChoices"]) elements[id].hidden = true;
 
 let fillMode = null;
 const document = {
@@ -36,6 +36,7 @@ const document = {
   listeners: {},
   getElementById: (id) => elements[id],
   querySelector: (selector) => selector === 'input[name="ocrFillMode"]:checked' && fillMode ? { value: fillMode } : null,
+  querySelectorAll: () => [elements.editorView],
   createElement: () => new Element("script"),
   addEventListener(type, handler) { (this.listeners[type] ||= []).push(handler); }
 };
@@ -67,7 +68,12 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 (async () => {
   elements.openOcrButton.dispatch("click");
-  assert.equal(elements.ocrPanel.hidden, false);
+  assert.equal(elements.ocrModal.hidden, false);
+  assert.equal(elements.editorView.inert, true);
+  elements.ocrPanel.dispatch("click");
+  assert.equal(elements.ocrModal.hidden, false, "clicking inside the panel must not close it");
+  elements.ocrViewport.dispatch("click", { target: elements.ocrPanel });
+  assert.equal(elements.ocrModal.hidden, false, "a bubbled panel click must not close it");
 
   elements.ocrFile.files = [{ name: "bad.gif", type: "image/gif", size: 100 }];
   elements.ocrFile.dispatch("change");
@@ -89,13 +95,22 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
   fillMode = "append";
   elements.ocrConfirmFill.dispatch("click");
   assert.equal(elements.englishText.value, "Existing paragraph.\n\nUser corrected text!");
-  assert.equal(elements.ocrPanel.hidden, true);
+  assert.equal(elements.ocrModal.hidden, true);
+  assert.equal(elements.editorView.inert, false);
   assert.equal(objectUrls.size, 0);
 
   const beforeCancel = elements.englishText.value;
   elements.openOcrButton.dispatch("click");
   elements.ocrCancel.dispatch("click");
   assert.equal(elements.englishText.value, beforeCancel);
+
+  elements.openOcrButton.dispatch("click");
+  elements.ocrBackdrop.dispatch("click");
+  assert.equal(elements.ocrModal.hidden, true, "clicking the real backdrop must close it");
+
+  elements.openOcrButton.dispatch("click");
+  elements.ocrClose.dispatch("click");
+  assert.equal(elements.ocrModal.hidden, true, "the close button must close it");
 
   elements.openOcrButton.dispatch("click");
   elements.ocrFile.files = [{ name: "blank.jpg", type: "image/jpeg", size: 10 }];

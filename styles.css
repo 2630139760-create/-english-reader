@@ -680,9 +680,12 @@ textarea:focus {
   backdrop-filter: blur(2px);
 }
 
+.ocr-modal { position: fixed; z-index: 100; inset: 0; isolation: isolate; }
+.ocr-backdrop { position: absolute; z-index: 0; inset: 0; background: rgba(17, 29, 48, 0.5); }
+.ocr-viewport { position: absolute; z-index: 1; inset: 0; display: grid; overflow: auto; overscroll-behavior: contain; padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); place-items: center; }
 .ocr-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
 .ocr-entry span, .ocr-picker span, .ocr-result p { color: var(--muted); font-size: 13px; }
-.ocr-panel { position: fixed; z-index: 31; inset: 3vh max(18px, calc((100vw - 960px) / 2)); overflow-y: auto; overscroll-behavior: contain; padding: 28px; border: 1px solid var(--line); border-radius: 18px; background: white; box-shadow: 0 24px 70px rgba(23,35,56,.24); }
+.ocr-panel { position: relative; width: min(100%, 924px); max-height: calc(100dvh - max(36px, env(safe-area-inset-top) + env(safe-area-inset-bottom))); overflow-y: auto; overscroll-behavior: contain; padding: 28px; border: 1px solid var(--line); border-radius: 18px; background: white; box-shadow: 0 24px 70px rgba(23,35,56,.24); }
 .ocr-panel h2 { margin: 8px 0 0; font-family: Georgia, serif; font-size: clamp(25px, 4vw, 34px); font-weight: 500; }
 .ocr-picker, .ocr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 18px 0; }
 .ocr-panel progress { width: 100%; height: 10px; accent-color: var(--blue); }
@@ -1014,7 +1017,8 @@ footer {
   .review-actions > *, .review-navigation > *, .review-complete-actions > * { width: 100%; }
   .gpt-copy-panel { inset: 0; padding: 20px 14px; border-radius: 0; }
   .gpt-copy-settings { grid-template-columns: 1fr; }
-  .ocr-panel { inset: 0; padding: 18px 14px; border-radius: 0; }
+  .ocr-viewport { padding: 0; place-items: stretch; }
+  .ocr-panel { width: 100%; max-height: 100dvh; padding: max(18px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); border: 0; border-radius: 0; }
   .ocr-workspace { grid-template-columns: 1fr; }
   .ocr-preview a { max-height: 38vh; }
   .ocr-actions { bottom: -18px; margin-bottom: -18px; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }

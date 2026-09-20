@@ -12,7 +12,7 @@
   const ACCEPTED_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
   const byId = (id) => document.getElementById(id);
   const ui = Object.fromEntries([
-    "openOcrButton", "ocrBackdrop", "ocrPanel", "ocrClose", "ocrFile", "ocrFileName", "ocrStatus",
+    "openOcrButton", "ocrModal", "ocrBackdrop", "ocrViewport", "ocrPanel", "ocrClose", "ocrFile", "ocrFileName", "ocrStatus",
     "ocrProgress", "ocrWorkspace", "ocrImageLink", "ocrImage", "ocrResultArea", "ocrText", "ocrStart",
     "ocrFill", "ocrFillChoices", "ocrConfirmFill", "ocrCancelFill", "ocrCancel", "englishText"
   ].map((id) => [id, byId(id)]));
@@ -25,6 +25,17 @@
   let recognizedText = "";
   let returnFocus = null;
   let libraryPromise = null;
+  let inertElements = [];
+
+  function setBackgroundInert(value) {
+    if (value) {
+      inertElements = [...document.querySelectorAll("body > header, body > main, body > footer")];
+      inertElements.forEach((element) => { element.inert = true; });
+      return;
+    }
+    inertElements.forEach((element) => { element.inert = false; });
+    inertElements = [];
+  }
 
   function setStatus(message, kind = "") {
     ui.ocrStatus.textContent = message;
@@ -63,8 +74,8 @@
 
   function openPanel(event) {
     returnFocus = event?.currentTarget || ui.openOcrButton;
-    ui.ocrPanel.hidden = false;
-    ui.ocrBackdrop.hidden = false;
+    ui.ocrModal.hidden = false;
+    setBackgroundInert(true);
     document.body.classList.add("panel-open");
     ui.ocrFile.focus();
   }
@@ -77,8 +88,8 @@
     ui.ocrFileName.textContent = "支持 PNG、JPEG、WebP，最大 15 MB";
     setStatus("");
     ui.ocrWorkspace.hidden = true;
-    ui.ocrPanel.hidden = true;
-    ui.ocrBackdrop.hidden = true;
+    ui.ocrModal.hidden = true;
+    setBackgroundInert(false);
     document.body.classList.remove("panel-open");
     returnFocus?.focus();
   }
@@ -236,7 +247,9 @@
   });
   ui.ocrCancelFill.addEventListener("click", () => { ui.ocrFillChoices.hidden = true; });
   [ui.ocrClose, ui.ocrCancel, ui.ocrBackdrop].forEach((element) => element.addEventListener("click", closePanel));
-  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !ui.ocrPanel.hidden) closePanel(); });
+  ui.ocrViewport.addEventListener("click", (event) => { if (event.target === ui.ocrViewport) closePanel(); });
+  ui.ocrPanel.addEventListener("click", (event) => event.stopPropagation());
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !ui.ocrModal.hidden) closePanel(); });
 
   globalThis.EnglishReaderOcr = { OCR_ASSETS, MAX_IMAGE_BYTES };
 })();
