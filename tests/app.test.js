@@ -21,11 +21,11 @@ const css=fs.readFileSync(path.join(__dirname,'..','styles.css'),'utf8');
 const ids=[...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]);
 const map=Object.fromEntries(ids.map(id=>['#'+id,new El('div',id)]));
 for(const id of ['articleForm','wordCardForm'])map['#'+id].tagName='FORM';
-for(const id of ['wordCard','wordCardBackdrop','readerView','libraryPanel','libraryBackdrop','articleVocabulary','dataPanel','dataBackdrop','backupPreview','gptCopyPanel','gptCopyBackdrop'])map['#'+id].hidden=true;
+for(const id of ['wordCard','wordCardBackdrop','readerView','libraryPanel','libraryBackdrop','articleVocabulary','dataPanel','dataBackdrop','backupPreview','contentImportPreview','gptCopyPanel','gptCopyBackdrop'])map['#'+id].hidden=true;
 for(const filter of ['all','word','phrase']){const b=new El('button');b.dataset.filter=filter;map['#vocabularyFilters'].append(b);const c=new El('button');c.dataset.filter=filter;map['#articleVocabularyFilters'].append(c)}
-let selectedImportMode='merge';
+let selectedImportMode='merge',selectedContentMode='new';
 const selectedReview={reviewType:'all',reviewStatus:'all',reviewLimit:'10',reviewOrder:'created'};
-const document={activeElement:null,body:new El('body'),querySelector:s=>{if(s==='input[name="importMode"]:checked')return {value:selectedImportMode};const match=s.match(/^input\[name=\"(reviewType|reviewStatus|reviewLimit|reviewOrder)\"\]:checked$/);return match?{value:selectedReview[match[1]]}:map[s]},createElement:t=>new El(t),createTextNode:t=>({textContent:t,nodeType:3}),createDocumentFragment(){const x=new El();x.fragment=true;return x},contains:()=>true,listeners:{},addEventListener(t,f){(this.listeners[t]??=[]).push(f)}};
+const document={activeElement:null,body:new El('body'),querySelector:s=>{if(s==='input[name="importMode"]:checked')return {value:selectedImportMode};if(s==='input[name="contentImportMode"]:checked')return {value:selectedContentMode};const match=s.match(/^input\[name=\"(reviewType|reviewStatus|reviewLimit|reviewOrder)\"\]:checked$/);return match?{value:selectedReview[match[1]]}:map[s]},createElement:t=>new El(t),createTextNode:t=>({textContent:t,nodeType:3}),createDocumentFragment(){const x=new El();x.fragment=true;return x},contains:()=>true,listeners:{},addEventListener(t,f){(this.listeners[t]??=[]).push(f)}};
 const legacy={articleTitle:'Legacy unit',original:{title:'Legacy English',english:'Keep  spaces. A well-known writer can\'t stop now.\n\nSecond paragraph.',chineseTitle:'旧标题',chinese:'旧翻译'},scenes:[{title:'Legacy scene',english:'Keep this scene.',chineseTitle:'旧场景',chinese:'场景翻译'}],vocabulary:{keep:{word:'Keep',meaning:'保留'}}};
 const store={'english-context-reader-draft':JSON.stringify(legacy)};
 const localStorage={getItem:k=>store[k]??null,setItem:(k,v)=>store[k]=v,removeItem:k=>delete store[k]};
@@ -49,10 +49,10 @@ assert.equal(saved().articles.length,1);assert.equal(saved().articles[0].scenes[
 
 function payload(id,title='Imported unit'){return {id,articleTitle:title,original:{title:'Original title',english:"Hello, brave new-world can't wait.\n\nAnother paragraph.",chineseTitle:'原标题',chinese:'原译'},scenes:[{title:'Scene 1',english:"Brave new-world can't wait here.",chineseTitle:'场景一',chinese:'译文'}]}}
 // Import creates a second unit rather than replacing the legacy one.
-map['#importText'].value=JSON.stringify(payload('stable-id'));map['#importButton'].dispatch('click');assert.equal(saved().articles.length,2);assert.equal(map['#importStatus'].textContent,'已作为新学习单元导入');
+map['#importText'].value=JSON.stringify(payload('stable-id'));map['#previewContentImportButton'].dispatch('click');map['#importButton'].dispatch('click');assert.equal(saved().articles.length,2);assert.ok(map['#importStatus'].textContent.includes('已新建学习单元'));
 // Duplicate IDs offer overwrite (confirm) or save-as-new (cancel).
-confirms=[false];map['#importText'].value=JSON.stringify(payload('stable-id','Copy'));map['#importButton'].dispatch('click');assert.equal(saved().articles.length,3);assert.ok(saved().articles.some(x=>x.articleTitle==='Copy'&&x.id!=='stable-id'));
-confirms=[true];map['#importText'].value=JSON.stringify(payload('stable-id','Overwritten'));map['#importButton'].dispatch('click');assert.equal(saved().articles.length,3);assert.equal(saved().articles.find(x=>x.id==='stable-id').articleTitle,'Overwritten');
+map['#importText'].value=JSON.stringify(payload('stable-id','Copy'));map['#previewContentImportButton'].dispatch('click');map['#importButton'].dispatch('click');assert.equal(saved().articles.length,3);assert.ok(saved().articles.some(x=>x.articleTitle==='Copy'&&x.id!=='stable-id'));
+context.openUnit('stable-id');selectedContentMode='current';map['#importText'].value=JSON.stringify(payload('stable-id','Overwritten'));map['#previewContentImportButton'].dispatch('click');map['#importButton'].dispatch('click');assert.equal(saved().articles.length,3);assert.equal(saved().articles.find(x=>x.id==='stable-id').articleTitle,'Overwritten');
 
 // Save and open/continue preserve the current article and reading tab.
 map['#articleForm'].dispatch('submit');assert.equal(map['#articleTabs'].children.length,2);map['#articleTabs'].dispatch('click',{target:map['#articleTabs'].children[1]});assert.equal(saved().articles.find(x=>x.id==='stable-id').lastContentIndex,1);
@@ -69,8 +69,7 @@ const priorTitle=map['#articleTitle'].value,priorOriginalTitle=map['#originalTit
 map['#articleTitle'].value='Latest draft unit';map['#originalTitle'].value='The “Latest” Original';map['#englishText'].value='First line: “Keep punctuation!”\n\nSecond line — unchanged.';
 map['#readerCopyGptButton'].dispatch('click',{currentTarget:map['#readerCopyGptButton']});let prompt=map['#gptPromptPreview'].value;
 assert.ok(prompt.includes('Latest draft unit')&&prompt.includes('The “Latest” Original')&&prompt.includes('First line: “Keep punctuation!”\n\nSecond line — unchanged.'));
-assert.ok(!prompt.includes('Brave new-world can\'t wait here.'),'active scene must not replace original');
-assert.ok(prompt.includes('\nBrave\n')&&prompt.includes("Brave new-world can't"),'associated word and phrase must be included');
+assert.ok(prompt.includes('Brave | 来源句：')&&prompt.includes("Brave new-world can't | 来源句："),'associated word and phrase must be included');
 assert.ok(!prompt.includes('\nKeep\n'),'vocabulary belonging only to another unit must be excluded');
 assert.ok(map['#gptVocabularyNotice'].textContent.includes('单词')&&map['#gptVocabularyNotice'].textContent.includes('短语'));
 
@@ -208,5 +207,15 @@ const localReview=saved().vocabulary[Object.keys(saved().vocabulary)[0]];const m
 map['#editorNewArticleButton'].dispatch('click');map['#articleTitle'].value='No vocabulary';map['#originalTitle'].value='Plain original';map['#englishText'].value='Original only.';map['#editorCopyGptButton'].dispatch('click',{currentTarget:map['#editorCopyGptButton']});
 assert.equal(map['#gptVocabularyNotice'].textContent,'本篇尚未收藏单词或短语');assert.ok(map['#gptPromptPreview'].value.includes('目标单词：\n\n无')&&map['#gptPromptPreview'].value.includes('目标短语：\n\n无')&&map['#gptPromptPreview'].value.includes('未指定，请围绕原文生成场景'));
 
+// Vocabulary import schema is strict while the old format remains valid.
+const oldParsed=context.parseImport(JSON.stringify(payload('old-compatible')));assert.equal(oldParsed.vocabulary,null);
+const vocabularyItem={term:' Brave ',type:'word',meaning:'勇敢的',partOfSpeech:'adjective',phonetic:'/breɪv/',usageNote:'描述面对危险而不退缩。',sourceSentence:'Brave people help others.',examples:[{english:'She is a brave child.',chinese:'她是个勇敢的孩子。'},{english:'Be brave and try again.',chinese:'勇敢一点，再试一次。'}],needsConfirmation:true,confirmationNote:'原句中的语义需确认。'};
+const parsedVocabulary=context.parseImport(JSON.stringify({...payload('vocabulary-import'),vocabulary:[vocabularyItem]}));assert.equal(parsedVocabulary.vocabulary[0].examples.length,2);assert.equal(parsedVocabulary.vocabulary[0].term,'Brave');
+for(const invalid of [{...vocabularyItem,examples:[]},{...vocabularyItem,needsConfirmation:'yes'},{...vocabularyItem,type:'idiom'}])assert.throws(()=>context.validateVocabularyImport([invalid]));
+assert.throws(()=>context.parseImport(JSON.stringify({...payload('bad'),vocabulary:{}})),/vocabulary/);
+// Context normalization retains two translated examples and isolates per-article meanings.
+const normalized=context.copyVocabulary({'word:brave':{type:'word',text:'Brave',reviewStatus:'learning',reviewCount:4,sources:[{articleId:'a',source:'A.',meaning:'勇敢',examples:vocabularyItem.examples},{articleId:'b',source:'B.',meaning:'壮烈',examples:[{english:'B1.',chinese:'乙一。'},{english:'B2.',chinese:'乙二。'}]}]}})['word:brave'];
+assert.equal(normalized.sources.length,2);assert.equal(normalized.sources[0].examples.length,2);assert.notEqual(normalized.sources[0].meaning,normalized.sources[1].meaning);assert.equal(normalized.reviewStatus,'learning');assert.equal(normalized.reviewCount,4);
+assert.ok(context.buildGptPrompt().includes('examples（恰好两个不同的简单例句对象'));assert.ok(context.buildGptPrompt().includes('needsConfirmation（布尔值）'));assert.ok(context.buildGptPrompt().includes('"vocabulary"'));
 console.log('Passed: copy-to-GPT draft/original/vocabulary/preferences/clipboard/empty states; legacy migration; UI behavior; complete backup; JSON/file preview; safe merge/deduplication; old-data migration; replace/undo; 1/3/5 scenes; progress restoration');
 })().catch(error=>{console.error(error);process.exitCode=1});

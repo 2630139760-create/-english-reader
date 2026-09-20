@@ -1055,3 +1055,7 @@ footer {
     transition-duration: 0.01ms !important;
   }
 }
+
+.confirmation-flag { display:flex; gap:.55rem; align-items:center; font-weight:700; }
+.confirmation-flag input { width:auto; }
+#contentImportPreview { margin:.75rem 0; }
