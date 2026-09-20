@@ -128,6 +128,7 @@
               <p id="importStatus" class="import-status" role="status" aria-live="polite"></p>
               <p id="sceneSummary" class="scene-summary">当前没有场景文章</p>
               <div class="import-actions">
+                <button id="editorCopyGptButton" class="secondary-button" type="button" aria-haspopup="dialog">复制给 GPT</button>
                 <button id="importButton" class="primary-button" type="button" aria-label="导入为新的学习单元">导入内容</button>
                 <button id="clearImportButton" class="secondary-button" type="button" aria-label="清空 JSON 输入">清空输入</button>
               </div>
@@ -151,6 +152,7 @@
             返回编辑
           </button>
           <div class="reader-actions">
+            <button id="readerCopyGptButton" class="secondary-button compact-button" type="button" aria-haspopup="dialog">复制给 GPT</button>
             <button id="readerLibraryButton" class="secondary-button compact-button" type="button" aria-label="打开文章库">文章库</button>
             <button id="phraseModeButton" class="secondary-button compact-button" type="button" aria-pressed="false" aria-label="开启选择短语模式">选择短语</button>
             <button
@@ -214,6 +216,25 @@
         </article>
       </section>
     </main>
+
+    <div id="gptCopyBackdrop" class="panel-backdrop" hidden></div>
+    <section id="gptCopyPanel" class="gpt-copy-panel" role="dialog" aria-modal="true" aria-labelledby="gptCopyTitle" hidden>
+      <header class="word-card-header">
+        <div><p class="eyebrow">CHATGPT PROMPT</p><h2 id="gptCopyTitle">复制给 GPT</h2></div>
+        <button id="gptCopyClose" class="icon-button" type="button" aria-label="关闭复制给 GPT 面板">×</button>
+      </header>
+      <p class="format-help">自动使用当前学习单元的原文与本篇已收藏词汇，不会发送数据或改变学习状态。</p>
+      <div class="gpt-copy-settings">
+        <div class="field"><label for="gptSceneCount">场景数量</label><select id="gptSceneCount" aria-label="场景数量"><option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option></select></div>
+        <div class="field"><label for="gptDifficulty">难度</label><input id="gptDifficulty" type="text" value="初学者，短句和常见词" /></div>
+        <div class="field"><label for="gptLength">每篇长度</label><input id="gptLength" type="text" value="80～120个英文单词" /></div>
+      </div>
+      <div class="field"><label for="gptExtra">额外要求 <span>选填</span></label><textarea id="gptExtra" rows="3"></textarea></div>
+      <p id="gptVocabularyNotice" class="import-status" role="status"></p>
+      <div class="field"><label for="gptPromptPreview">完整文本预览</label><textarea id="gptPromptPreview" class="gpt-prompt-preview" rows="18" readonly spellcheck="false"></textarea></div>
+      <p id="gptCopyStatus" class="import-status" role="status" aria-live="polite"></p>
+      <button id="gptCopyButton" class="primary-button" type="button">一键复制</button>
+    </section>
 
     <div id="wordCardBackdrop" class="word-card-backdrop" hidden></div>
     <aside

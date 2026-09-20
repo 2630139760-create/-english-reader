@@ -672,6 +672,49 @@ textarea:focus {
   backdrop-filter: blur(2px);
 }
 
+.panel-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  background: rgba(17, 29, 48, 0.42);
+  backdrop-filter: blur(2px);
+}
+
+.gpt-copy-panel {
+  position: fixed;
+  z-index: 31;
+  inset: 3vh max(18px, calc((100vw - 760px) / 2));
+  overflow-y: auto;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 24px 70px rgba(23, 35, 56, 0.24);
+}
+
+.gpt-copy-settings {
+  display: grid;
+  grid-template-columns: 120px minmax(180px, 1fr) minmax(180px, 1fr);
+  gap: 12px;
+}
+
+.gpt-copy-panel select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e3;
+  border-radius: 8px;
+  background: white;
+  font: inherit;
+}
+
+.gpt-prompt-preview {
+  min-height: 300px;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
 .word-card {
   position: fixed;
   z-index: 21;
@@ -919,6 +962,8 @@ footer {
   .review-card { min-height: 300px; padding: 22px 16px; }
   .review-progress { margin-top: -235px; }
   .review-actions > *, .review-navigation > *, .review-complete-actions > * { width: 100%; }
+  .gpt-copy-panel { inset: 0; padding: 20px 14px; border-radius: 0; }
+  .gpt-copy-settings { grid-template-columns: 1fr; }
 
   main {
     width: min(100% - 24px, 1120px);

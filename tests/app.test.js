@@ -3,6 +3,8 @@ const vm = require('vm');
 const assert = require('assert');
 const path = require('path');
 
+(async()=>{
+
 class ClassList { constructor(){this.set=new Set()} add(...x){x.forEach(v=>this.set.add(v))} remove(...x){x.forEach(v=>this.set.delete(v))} toggle(x,f){const on=f===undefined?!this.set.has(x):f;on?this.set.add(x):this.set.delete(x);return on} contains(x){return this.set.has(x)} }
 class El {
   constructor(tag='div',id=''){this.tagName=tag.toUpperCase();this.id=id;this.value='';this.textContent='';this.hidden=false;this.dataset={};this.attrs={};this.children=[];this.listeners={};this.classList=new ClassList();this.style={};this.tabIndex=0}
@@ -19,7 +21,7 @@ const css=fs.readFileSync(path.join(__dirname,'..','styles.css'),'utf8');
 const ids=[...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]);
 const map=Object.fromEntries(ids.map(id=>['#'+id,new El('div',id)]));
 for(const id of ['articleForm','wordCardForm'])map['#'+id].tagName='FORM';
-for(const id of ['wordCard','wordCardBackdrop','readerView','libraryPanel','libraryBackdrop','articleVocabulary','dataPanel','dataBackdrop','backupPreview'])map['#'+id].hidden=true;
+for(const id of ['wordCard','wordCardBackdrop','readerView','libraryPanel','libraryBackdrop','articleVocabulary','dataPanel','dataBackdrop','backupPreview','gptCopyPanel','gptCopyBackdrop'])map['#'+id].hidden=true;
 for(const filter of ['all','word','phrase']){const b=new El('button');b.dataset.filter=filter;map['#vocabularyFilters'].append(b);const c=new El('button');c.dataset.filter=filter;map['#articleVocabularyFilters'].append(c)}
 let selectedImportMode='merge';
 const selectedReview={reviewType:'all',reviewStatus:'all',reviewLimit:'10',reviewOrder:'created'};
@@ -60,6 +62,31 @@ let words=map['#readerEnglish'].querySelectorAll('.word-token');let brave=words.
 // Phrase mode selects the inclusive range, preserving hyphen/apostrophe and source sentence.
 map['#phraseModeButton'].dispatch('click');words=map['#readerEnglish'].querySelectorAll('.word-token');const first=words.find(x=>x.dataset.word==='brave'),last=words.find(x=>x.dataset.word==="can't");map['#readerEnglish'].dispatch('click',{target:first});map['#readerEnglish'].dispatch('click',{target:last});assert.equal(map['#wordCardTitle'].textContent,"Brave new-world can't");assert.ok(words.filter(x=>x.classList.contains('is-selected')).length===3);map['#wordCardClose'].dispatch('click');assert.equal(Object.values(saved().vocabulary).filter(x=>x.type==='phrase').length,0);assert.ok(words.every(x=>!x.classList.contains('is-selected')));
 words=map['#readerEnglish'].querySelectorAll('.word-token');const firstAgain=words.find(x=>x.dataset.word==='brave'),lastAgain=words.find(x=>x.dataset.word==="can't");map['#phraseModeButton'].dispatch('click');map['#readerEnglish'].dispatch('click',{target:firstAgain});map['#readerEnglish'].dispatch('click',{target:lastAgain});map['#wordCardForm'].dispatch('submit');let phrase=Object.values(saved().vocabulary).find(x=>x.type==='phrase');assert.equal(phrase.text,"Brave new-world can't");assert.ok(phrase.sources.some(x=>x.articleId==='stable-id'&&x.source.includes("Brave new-world can't wait here.")));
+
+// Copy-to-GPT is present in both views and exports the latest, unblurred editor values and original even while a scene is active.
+for(const id of ['editorCopyGptButton','readerCopyGptButton','gptCopyButton','gptCopyClose'])assert.ok(ids.includes(id)&&(map['#'+id].listeners.click||[]).length,`${id} must be visible and interactive`);
+const priorTitle=map['#articleTitle'].value,priorOriginalTitle=map['#originalTitle'].value,priorEnglish=map['#englishText'].value;
+map['#articleTitle'].value='Latest draft unit';map['#originalTitle'].value='The “Latest” Original';map['#englishText'].value='First line: “Keep punctuation!”\n\nSecond line — unchanged.';
+map['#readerCopyGptButton'].dispatch('click',{currentTarget:map['#readerCopyGptButton']});let prompt=map['#gptPromptPreview'].value;
+assert.ok(prompt.includes('Latest draft unit')&&prompt.includes('The “Latest” Original')&&prompt.includes('First line: “Keep punctuation!”\n\nSecond line — unchanged.'));
+assert.ok(!prompt.includes('Brave new-world can\'t wait here.'),'active scene must not replace original');
+assert.ok(prompt.includes('\nBrave\n')&&prompt.includes("Brave new-world can't"),'associated word and phrase must be included');
+assert.ok(!prompt.includes('\nKeep\n'),'vocabulary belonging only to another unit must be excluded');
+assert.ok(map['#gptVocabularyNotice'].textContent.includes('单词')&&map['#gptVocabularyNotice'].textContent.includes('短语'));
+
+// Preferences persist per unit and survive the same normalized backup/restore path.
+map['#gptSceneCount'].value='3';map['#gptSceneCount'].dispatch('input');map['#gptExtra'].value='Use dialogue.';map['#gptExtra'].dispatch('input');
+assert.equal(saved().articles.find(x=>x.id==='stable-id').gptPreferences.extra,'Use dialogue.');
+const restoredCopyPrefs=context.validateLibrary(JSON.parse(JSON.stringify(saved()))).articles.find(x=>x.id==='stable-id').gptPreferences;
+assert.equal(restoredCopyPrefs.sceneCount,'3');assert.equal(restoredCopyPrefs.extra,'Use dialogue.');
+assert.deepEqual(context.normalizeUnit({original:{english:''}}).gptPreferences,{sceneCount:'5',difficulty:'初学者，短句和常见词',length:'80～120个英文单词',extra:''});
+
+// Clipboard success is only announced after resolution; failure retains selectable preview and gives manual guidance.
+map['#gptCopyButton'].dispatch('click');await new Promise(resolve=>setImmediate(resolve));assert.equal(navigator.copied,prompt=map['#gptPromptPreview'].value);assert.equal(map['#gptCopyStatus'].textContent,'已复制，前往 GPT 对话粘贴即可');
+navigator.clipboard.writeText=async()=>{throw new Error('denied')};map['#gptCopyButton'].dispatch('click');await new Promise(resolve=>setImmediate(resolve));assert.ok(map['#gptCopyStatus'].textContent.includes('手动选择'));
+map['#englishText'].value='';map['#gptCopyButton'].dispatch('click');await Promise.resolve();assert.equal(map['#gptCopyStatus'].textContent,'请先填写英文原文');
+map['#articleTitle'].value='';map['#originalTitle'].value='';map['#englishText'].value=priorEnglish;prompt=context.buildGptPrompt();assert.ok(prompt.includes('未命名学习单元')&&prompt.includes('Untitled Article'));
+map['#articleTitle'].value=priorTitle;map['#originalTitle'].value=priorOriginalTitle;map['#englishText'].value=priorEnglish;map['#gptCopyClose'].dispatch('click');navigator.clipboard.writeText=async text=>{navigator.copied=text};
 
 // All/word/phrase filters show the correct item type.
 const filters=[...map['#vocabularyFilters'].children];map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='phrase')});assert.ok(map['#vocabularyItems'].children.every(x=>x.children[0].textContent.startsWith('短语')));map['#vocabularyFilters'].dispatch('click',{target:filters.find(x=>x.dataset.filter==='word')});assert.ok(map['#vocabularyItems'].children.every(x=>x.children[0].textContent.startsWith('单词')));
@@ -177,4 +204,9 @@ map['#reviewExit'].dispatch('click');assert.equal(map['#reviewPanel'].hidden,tru
 const phaseSixExport=JSON.parse(context.backupJSON());assert.ok(Object.values(phaseSixExport.data.library.vocabulary).every(entry=>'reviewStatus'in entry&&'reviewCount'in entry&&'lastReviewedAt'in entry&&'lastReviewResult'in entry));
 const localReview=saved().vocabulary[Object.keys(saved().vocabulary)[0]];const mergeProbe=context.validateLibrary({version:5,currentId:saved().currentId,articles:[],vocabulary:{[Object.keys(saved().vocabulary)[0]]:{...localReview,reviewStatus:'mastered',reviewCount:99,lastReviewedAt:'2099-01-01T00:00:00.000Z',lastReviewResult:'mastered'}}});const mergedReview=context.mergeLibrary(mergeProbe).result.vocabulary[Object.keys(saved().vocabulary)[0]];assert.equal(mergedReview.reviewStatus,'mastered');assert.equal(mergedReview.reviewCount,99);
 
-console.log('Passed: legacy migration; UI behavior; complete backup; JSON/file preview; safe merge/deduplication; old-data migration; replace/undo; 1/3/5 scenes; progress restoration');
+// A new unit with no associations clearly reports the empty vocabulary state while remaining copyable.
+map['#editorNewArticleButton'].dispatch('click');map['#articleTitle'].value='No vocabulary';map['#originalTitle'].value='Plain original';map['#englishText'].value='Original only.';map['#editorCopyGptButton'].dispatch('click',{currentTarget:map['#editorCopyGptButton']});
+assert.equal(map['#gptVocabularyNotice'].textContent,'本篇尚未收藏单词或短语');assert.ok(map['#gptPromptPreview'].value.includes('目标单词：\n\n无')&&map['#gptPromptPreview'].value.includes('目标短语：\n\n无')&&map['#gptPromptPreview'].value.includes('未指定，请围绕原文生成场景'));
+
+console.log('Passed: copy-to-GPT draft/original/vocabulary/preferences/clipboard/empty states; legacy migration; UI behavior; complete backup; JSON/file preview; safe merge/deduplication; old-data migration; replace/undo; 1/3/5 scenes; progress restoration');
+})().catch(error=>{console.error(error);process.exitCode=1});
