@@ -58,7 +58,43 @@
 }
 ```
 
-“复制给 GPT”生成的提示词内含同一字段定义和完整示例，并附带当前标题、完整原文、收藏词汇的真实来源句、场景数量、难度、长度与补充要求。
+“复制给 GPT”提供两个工作步骤：
+
+1. **生成翻译与场景**：提示词自动附带当前标题、逐字保留的完整原文、本篇全部收藏词汇及其真实来源、场景数量、难度和长度，并要求返回上面的完整学习内容格式。
+2. **补充词汇资料**：默认勾选缺少中文释义、用法注释或两个完整双语例句的收藏项，也可重新勾选已有资料的项目。提示词只要求返回当前所选词汇，不生成文章或场景。
+
+两个提示词都包含准确字段、完整结构示例和统一的单个 `json` Markdown 代码块输出规则，“额外要求”始终选填。
+
+### 独立词汇补充格式
+
+词汇补充导入与完整学习内容、数据备份明确区分，顶层固定使用 `task` 和 `schemaVersion`：
+
+```json
+{
+  "task": "vocabularySupplement",
+  "schemaVersion": 1,
+  "articleTitle": "Airport English",
+  "vocabulary": [
+    {
+      "term": "check in",
+      "type": "phrase",
+      "meaning": "办理登机手续",
+      "partOfSpeech": "动词短语",
+      "phonetic": "",
+      "usageNote": "常与 at 搭配说明地点。",
+      "sourceSentence": "I check in at the desk.",
+      "examples": [
+        { "english": "We check in early.", "chinese": "我们提早办理登机手续。" },
+        { "english": "Please check in here.", "chinese": "请在这里办理登记。" }
+      ],
+      "needsConfirmation": false,
+      "confirmationNote": ""
+    }
+  ]
+}
+```
+
+导入目标始终是用户当前选择的学习单元；`articleTitle` 只用于预览核对，不用于按重名标题静默改选文章。匹配忽略大小写和首尾空白，但不会合并不同词形或短语。未匹配项不会新增收藏；默认仅补空值，非空冲突必须勾选覆盖。词汇补充不会替换原文、翻译、场景、阅读位置、复习状态或其他文章的语境资料。
 
 ## 本地运行与测试
 
