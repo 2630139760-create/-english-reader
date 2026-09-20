@@ -33,7 +33,7 @@ let confirms=[],promptValue=null;
 const window={scrollY:0,scrollTo(options){this.scrollY=options?.top||0},listeners:{},addEventListener(type,fn){(this.listeners[type]??=[]).push(fn)},dispatch(type){for(const fn of this.listeners[type]||[])fn()},confirm(){return confirms.length?confirms.shift():false},prompt(){return promptValue},speechSynthesis:{getVoices:()=>[],cancel(){},speak(){}}};
 class FileReader { readAsText(file){this.result=file.content;this.onload()} }
 const navigator={clipboard:{writeText:async text=>{navigator.copied=text}}};
-const context={document,window,localStorage,navigator,FileReader,SpeechSynthesisUtterance:function(){},console,Date,Math};
+const context={document,window,localStorage,navigator,FileReader,SpeechSynthesisUtterance:function(text){this.text=text},console,Date,Math};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8'),context,{filename:'app.js'});
 const saved=()=>JSON.parse(store['english-context-reader-library-v4']);
 
@@ -43,6 +43,11 @@ for(const label of ['文章库','词汇表','选择短语','全部','单词','�
 assert.ok(css.includes('.reader-nav')&&css.match(/\.reader-nav\s*\{[^}]*flex-wrap:\s*wrap/s),'reader navigation must wrap at iPad landscape widths');
 assert.ok(css.match(/\.reader-actions\s*\{[^}]*flex-wrap:\s*wrap/s),'reader actions must not overflow');
 for(const id of ['editorLibraryButton','editorNewArticleButton','readerLibraryButton','phraseModeButton','vocabularyToggle'])assert.ok((map['#'+id].listeners.click||[]).length,`${id} must bind a click event`);
+assert.match(html,/word-card-title-row[\s\S]*wordCardTitle[\s\S]*speakWord[\s\S]*wordCardClose/,'speech control must sit beside the card title and before close');
+assert.equal((html.match(/id="speakWord"/g)||[]).length,1,'the card must expose only one speech control');
+assert.match(html,/id="speakWord"[^>]*type="button"[^>]*aria-label="朗读当前单词或短语"/,'speech control must not submit the form and must have an accessible name');
+assert.match(css,/\.word-card-title-row\s*\{[^}]*flex-wrap:\s*wrap/s,'long terms and narrow screens must allow title controls to wrap');
+assert.match(css,/\.word-card-header h2\s*\{[^}]*overflow-wrap:\s*anywhere/s,'long terms must not obscure adjacent controls');
 
 // Legacy migration retains article, scene, translation and vocabulary without deleting the old key.
 assert.equal(saved().articles.length,1);assert.equal(saved().articles[0].scenes[0].chinese,'场景翻译');assert.equal(saved().articles[0].original.chinese,'旧翻译');assert.equal(saved().vocabulary['word:keep'].meaning,'保留');assert.equal(saved().vocabulary['word:keep'].reviewStatus,'unfamiliar');assert.equal(saved().vocabulary['word:keep'].reviewCount,0);assert.equal(saved().vocabulary['word:keep'].lastReviewedAt,null);assert.ok(store['english-context-reader-draft']);
@@ -59,8 +64,12 @@ map['#articleForm'].dispatch('submit');assert.equal(map['#articleTabs'].children
 // Word selection is temporary until confirmation, then persists; closing cancels it.
 let words=map['#readerEnglish'].querySelectorAll('.word-token');let brave=words.find(x=>x.dataset.word==='brave');map['#readerEnglish'].dispatch('click',{target:brave});assert.ok(brave.classList.contains('is-selected'));map['#wordCardClose'].dispatch('click');assert.ok(!brave.classList.contains('is-selected'));map['#readerEnglish'].dispatch('click',{target:brave});map['#wordCardForm'].dispatch('submit');assert.ok(saved().vocabulary['word:brave']);assert.ok(map['#readerEnglish'].querySelectorAll('.word-token').find(x=>x.dataset.word==='brave').classList.contains('is-saved'));
 
+// The single top speech control always reads the currently open card after switching entries.
+const cardSpeech=[];window.speechSynthesis.speak=utterance=>cardSpeech.push(utterance.text);map['#speakWord'].dispatch('click');assert.equal(cardSpeech.at(-1),'Brave');
+
 // Phrase mode selects the inclusive range, preserving hyphen/apostrophe and source sentence.
 map['#phraseModeButton'].dispatch('click');words=map['#readerEnglish'].querySelectorAll('.word-token');const first=words.find(x=>x.dataset.word==='brave'),last=words.find(x=>x.dataset.word==="can't");map['#readerEnglish'].dispatch('click',{target:first});map['#readerEnglish'].dispatch('click',{target:last});assert.equal(map['#wordCardTitle'].textContent,"Brave new-world can't");assert.ok(words.filter(x=>x.classList.contains('is-selected')).length===3);map['#wordCardClose'].dispatch('click');assert.equal(Object.values(saved().vocabulary).filter(x=>x.type==='phrase').length,0);assert.ok(words.every(x=>!x.classList.contains('is-selected')));
+map['#speakWord'].dispatch('click');assert.equal(cardSpeech.at(-1),"Brave new-world can't");assert.equal(map['#speakWord'].listeners.click.length,1,'switching cards must not bind duplicate speech handlers');
 words=map['#readerEnglish'].querySelectorAll('.word-token');const firstAgain=words.find(x=>x.dataset.word==='brave'),lastAgain=words.find(x=>x.dataset.word==="can't");map['#phraseModeButton'].dispatch('click');map['#readerEnglish'].dispatch('click',{target:firstAgain});map['#readerEnglish'].dispatch('click',{target:lastAgain});map['#wordCardForm'].dispatch('submit');let phrase=Object.values(saved().vocabulary).find(x=>x.type==='phrase');assert.equal(phrase.text,"Brave new-world can't");assert.ok(phrase.sources.some(x=>x.articleId==='stable-id'&&x.source.includes("Brave new-world can't wait here.")));
 
 // Copy-to-GPT is present in both views and exports the latest, unblurred editor values and original even while a scene is active.

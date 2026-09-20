@@ -807,11 +807,38 @@ textarea:focus {
   border-bottom: 1px solid var(--line);
 }
 
+.word-card-heading {
+  min-width: 0;
+  flex: 1;
+}
+
+.word-card-title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 9px;
+}
+
 .word-card-header h2 {
-  margin: 9px 0 0;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
   font-family: Georgia, serif;
   font-size: 34px;
   font-weight: 500;
+}
+
+.word-card-speak {
+  display: inline-flex;
+  min-height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  white-space: nowrap;
 }
 
 .icon-button {
@@ -833,14 +860,14 @@ textarea:focus {
 }
 
 .word-card-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
 }
 
 .word-card-actions .primary-button {
-  width: 100%;
+  min-width: min(100%, 220px);
 }
 
 .secondary-button {
@@ -1050,6 +1077,18 @@ footer {
 
   .word-card-header h2 {
     font-size: 29px;
+  }
+
+  .word-card-header {
+    gap: 12px;
+  }
+
+  .word-card-title-row {
+    align-items: flex-start;
+  }
+
+  .word-card-actions .primary-button {
+    width: 100%;
   }
 }
 
