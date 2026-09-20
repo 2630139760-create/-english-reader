@@ -79,6 +79,10 @@
               spellcheck="true"
               required
             ></textarea>
+            <div class="ocr-entry">
+              <button id="openOcrButton" class="secondary-button" type="button" aria-haspopup="dialog">从图片识别英文</button>
+              <span>图片只在此设备的浏览器中处理</span>
+            </div>
             <p class="field-error" id="englishError" aria-live="polite"></p>
           </div>
 
@@ -229,6 +233,43 @@
         </article>
       </section>
     </main>
+
+    <div id="ocrBackdrop" class="panel-backdrop" hidden></div>
+    <section id="ocrPanel" class="ocr-panel" role="dialog" aria-modal="true" aria-labelledby="ocrTitle" hidden>
+      <header class="word-card-header">
+        <div><p class="eyebrow">ON-DEVICE OCR</p><h2 id="ocrTitle">从图片识别英文原文</h2></div>
+        <button id="ocrClose" class="icon-button" type="button" aria-label="取消并关闭图片识别">×</button>
+      </header>
+      <p class="format-help">识别在当前设备中进行，图片不会上传到识别服务。首次识别需要联网下载约数 MB 的固定版本识别程序和英文模型。</p>
+      <div class="ocr-picker">
+        <label class="secondary-button file-button" for="ocrFile">选择一张图片</label>
+        <input id="ocrFile" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" />
+        <span id="ocrFileName">支持 PNG、JPEG、WebP，最大 15 MB</span>
+      </div>
+      <p id="ocrStatus" class="import-status" role="status" aria-live="polite"></p>
+      <progress id="ocrProgress" max="100" value="0" hidden>0%</progress>
+      <div id="ocrWorkspace" class="ocr-workspace" hidden>
+        <figure class="ocr-preview"><figcaption>原始图片（可点开或双指缩放）</figcaption><a id="ocrImageLink" target="_blank" rel="noopener"><img id="ocrImage" alt="待识别的英文图片预览" /></a></figure>
+        <div id="ocrResultArea" class="field ocr-result" hidden>
+          <label for="ocrText">可编辑识别结果</label>
+          <textarea id="ocrText" rows="14" lang="en" spellcheck="true"></textarea>
+          <p>请对照图片检查漏字、标点和换行，确认后填入原文。</p>
+        </div>
+      </div>
+      <fieldset id="ocrFillChoices" class="import-mode" hidden>
+        <legend>英文原文已有内容</legend>
+        <label><input type="radio" name="ocrFillMode" value="replace" /> 替换原文</label>
+        <label><input type="radio" name="ocrFillMode" value="append" /> 追加到末尾</label>
+        <button id="ocrConfirmFill" class="primary-button" type="button">确认填入</button>
+        <button id="ocrCancelFill" class="secondary-button" type="button">取消</button>
+      </fieldset>
+      <div class="ocr-actions">
+        <button id="ocrStart" class="primary-button" type="button" disabled>开始识别</button>
+        <button id="ocrFill" class="primary-button" type="button" hidden>填入原文</button>
+        <label class="secondary-button file-button" for="ocrFile">重新选择图片</label>
+        <button id="ocrCancel" class="secondary-button" type="button">取消</button>
+      </div>
+    </section>
 
     <div id="gptCopyBackdrop" class="panel-backdrop" hidden></div>
     <section id="gptCopyPanel" class="gpt-copy-panel" role="dialog" aria-modal="true" aria-labelledby="gptCopyTitle" hidden>
@@ -412,5 +453,6 @@
     </footer>
 
     <script src="app.js"></script>
+    <script src="ocr.js"></script>
   </body>
 </html>
