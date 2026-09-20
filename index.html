@@ -234,8 +234,10 @@
       </section>
     </main>
 
-    <div id="ocrBackdrop" class="panel-backdrop" hidden></div>
-    <section id="ocrPanel" class="ocr-panel" role="dialog" aria-modal="true" aria-labelledby="ocrTitle" hidden>
+    <div id="ocrModal" class="ocr-modal" hidden>
+      <div id="ocrBackdrop" class="ocr-backdrop" aria-hidden="true"></div>
+      <div id="ocrViewport" class="ocr-viewport">
+        <section id="ocrPanel" class="ocr-panel" role="dialog" aria-modal="true" aria-labelledby="ocrTitle">
       <header class="word-card-header">
         <div><p class="eyebrow">ON-DEVICE OCR</p><h2 id="ocrTitle">从图片识别英文原文</h2></div>
         <button id="ocrClose" class="icon-button" type="button" aria-label="取消并关闭图片识别">×</button>
@@ -269,7 +271,9 @@
         <label class="secondary-button file-button" for="ocrFile">重新选择图片</label>
         <button id="ocrCancel" class="secondary-button" type="button">取消</button>
       </div>
-    </section>
+        </section>
+      </div>
+    </div>
 
     <div id="gptCopyBackdrop" class="panel-backdrop" hidden></div>
     <section id="gptCopyPanel" class="gpt-copy-panel" role="dialog" aria-modal="true" aria-labelledby="gptCopyTitle" hidden>
