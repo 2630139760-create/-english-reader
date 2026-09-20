@@ -6,7 +6,7 @@ const BACKUP_SCHEMA_VERSION = 1;
 const WORD_PATTERN = /[A-Za-z]+(?:[’'][A-Za-z]+)*(?:-[A-Za-z]+(?:[’'][A-Za-z]+)*)*/g;
 const $ = (selector) => document.querySelector(selector);
 const elements = Object.fromEntries([
-  "editorView","readerView","articleForm","articleTitle","originalTitle","englishText","chineseTitle","chineseText","titleError","originalTitleError","englishError","importText","importButton","clearImportButton","importStatus","sceneSummary","articleTabs","readerUnitTitle","readerTitle","readerEnglish","readerTranslation","readerChineseTitle","readerChineseText","translationSection","translationToggle","translationToggleText","backButton","vocabularyToggle","vocabularyCount","vocabularyList","vocabularySummary","vocabularyItems","vocabularyEmpty","vocabularyFilters","wordCard","wordCardBackdrop","wordCardClose","wordCardTitle","wordCardForm","wordMeaning","wordPhonetic","wordExample","wordSource","wordCardStatus","wordCardSubmit","speakWord","deleteWord","phraseModeButton","libraryButton","editorLibraryButton","readerLibraryButton","editorNewArticleButton","libraryBackdrop","libraryPanel","libraryClose","libraryItems","libraryEmpty","libraryStatus","newArticleButton","saveArticleButton","articleVocabulary","articleVocabularyBack","articleVocabularyTitle","articleVocabularySummary","articleVocabularyFilters","articleVocabularyItems","articleVocabularyEmpty","libraryTitle","dataManagementButton","dataBackdrop","dataPanel","dataPanelClose","dataStats","lastExportTime","lastImportTime","exportDataButton","copyBackupButton","backupFile","backupText","previewBackupButton","backupPreview","backupPreviewDetails","confirmImportButton","undoImportButton","dataStatus","startReviewButton","vocabularyStatusFilters","reviewArticleButton","articleVocabularyStatusFilters","reviewBackdrop","reviewPanel","reviewClose","reviewSetup","reviewScopeLabel","reviewMatchCount","beginReviewButton","reviewSession","reviewCard","reviewProgress","reviewTypeBadge","reviewWord","reviewAnswerHint","reviewAnswer","reviewSpeak","showReviewAnswer","reviewStatusActions","reviewPrevious","reviewUndo","reviewNext","reviewExit","reviewComplete","reviewSummary","reviewAgain","reviewDifficult","reviewReturn"
+  "editorView","readerView","articleForm","articleTitle","originalTitle","englishText","chineseTitle","chineseText","titleError","originalTitleError","englishError","importText","importButton","clearImportButton","importStatus","sceneSummary","articleTabs","readerUnitTitle","readerTitle","readerEnglish","readerTranslation","readerChineseTitle","readerChineseText","translationSection","translationToggle","translationToggleText","backButton","vocabularyToggle","vocabularyCount","vocabularyList","vocabularySummary","vocabularyItems","vocabularyEmpty","vocabularyFilters","wordCard","wordCardBackdrop","wordCardClose","wordCardTitle","wordCardForm","wordMeaning","wordPhonetic","wordExample","wordSource","wordCardStatus","wordCardSubmit","speakWord","deleteWord","phraseModeButton","libraryButton","editorLibraryButton","readerLibraryButton","editorNewArticleButton","libraryBackdrop","libraryPanel","libraryClose","libraryItems","libraryEmpty","libraryStatus","newArticleButton","saveArticleButton","articleVocabulary","articleVocabularyBack","articleVocabularyTitle","articleVocabularySummary","articleVocabularyFilters","articleVocabularyItems","articleVocabularyEmpty","libraryTitle","dataManagementButton","dataBackdrop","dataPanel","dataPanelClose","dataStats","lastExportTime","lastImportTime","exportDataButton","copyBackupButton","backupFile","backupText","previewBackupButton","backupPreview","backupPreviewDetails","confirmImportButton","undoImportButton","dataStatus","startReviewButton","vocabularyStatusFilters","reviewArticleButton","articleVocabularyStatusFilters","reviewBackdrop","reviewPanel","reviewClose","reviewSetup","reviewScopeLabel","reviewMatchCount","beginReviewButton","reviewSession","reviewCard","reviewProgress","reviewTypeBadge","reviewWord","reviewAnswerHint","reviewAnswer","reviewSpeak","showReviewAnswer","reviewStatusActions","reviewPrevious","reviewUndo","reviewNext","reviewExit","reviewComplete","reviewSummary","reviewAgain","reviewDifficult","reviewReturn","editorCopyGptButton","readerCopyGptButton","gptCopyBackdrop","gptCopyPanel","gptCopyClose","gptSceneCount","gptDifficulty","gptLength","gptExtra","gptVocabularyNotice","gptPromptPreview","gptCopyStatus","gptCopyButton"
 ].map((id) => [id, $(`#${id}`)]));
 Object.assign(globalThis, elements);
 
@@ -16,6 +16,8 @@ let phraseMode = false, phraseStart = null, pendingPhrase = null, vocabularyFilt
 let articleVocabularyId = null, articleVocabularyFilter = "all", vocabularyStatusFilter = "all", articleVocabularyStatusFilter = "all";
 let reviewScopeArticleId = null, reviewQueue = [], reviewIndex = 0, reviewRevealed = false, reviewHistory = [], reviewResults = {}, reviewOptions = null, reviewTrigger = null;
 let pendingBackup = null, dataTrigger = null;
+let gptCopyTrigger = null;
+const DEFAULT_GPT_PREFERENCES = { sceneCount: "5", difficulty: "初学者，短句和常见词", length: "80～120个英文单词", extra: "" };
 
 function isPlainObject(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
 function uid() { return `article-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`; }
@@ -68,7 +70,8 @@ function migrateLegacy() {
 }
 function normalizeUnit(raw) {
   const createdAt = typeof raw?.createdAt === "string" ? raw.createdAt : now();
-  return { id: typeof raw?.id === "string" && raw.id ? raw.id : uid(), articleTitle: typeof raw?.articleTitle === "string" ? raw.articleTitle : (raw?.title || "未命名文章"), original: normalizeArticlePart(raw?.original || raw), scenes: Array.isArray(raw?.scenes) ? raw.scenes.slice(0, 5).map(normalizeArticlePart) : [], createdAt, updatedAt: typeof raw?.updatedAt === "string" ? raw.updatedAt : createdAt, lastContentIndex: Number.isInteger(raw?.lastContentIndex) ? raw.lastContentIndex : 0, lastScrollY: Number.isFinite(raw?.lastScrollY) ? raw.lastScrollY : 0 };
+  const preferences = isPlainObject(raw?.gptPreferences) ? raw.gptPreferences : {};
+  return { id: typeof raw?.id === "string" && raw.id ? raw.id : uid(), articleTitle: typeof raw?.articleTitle === "string" ? raw.articleTitle : (raw?.title || "未命名文章"), original: normalizeArticlePart(raw?.original || raw), scenes: Array.isArray(raw?.scenes) ? raw.scenes.slice(0, 5).map(normalizeArticlePart) : [], gptPreferences: { sceneCount: ["1","2","3","4","5"].includes(String(preferences.sceneCount)) ? String(preferences.sceneCount) : DEFAULT_GPT_PREFERENCES.sceneCount, difficulty: typeof preferences.difficulty === "string" ? preferences.difficulty : DEFAULT_GPT_PREFERENCES.difficulty, length: typeof preferences.length === "string" ? preferences.length : DEFAULT_GPT_PREFERENCES.length, extra: typeof preferences.extra === "string" ? preferences.extra : "" }, createdAt, updatedAt: typeof raw?.updatedAt === "string" ? raw.updatedAt : createdAt, lastContentIndex: Number.isInteger(raw?.lastContentIndex) ? raw.lastContentIndex : 0, lastScrollY: Number.isFinite(raw?.lastScrollY) ? raw.lastScrollY : 0 };
 }
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 function currentUnit() { return state.articles.find((item) => item.id === state.currentId) || null; }
@@ -79,7 +82,7 @@ function fillEditor(unit) {
 function saveCurrent(showStatus = false) {
   if (!state.currentId) state.currentId = uid();
   const old = currentUnit(); const stamp = now();
-  const unit = normalizeUnit({ id: state.currentId, articleTitle: articleTitle.value.trim() || "未命名文章", original: getOriginal(), scenes, createdAt: old?.createdAt || stamp, updatedAt: stamp, lastContentIndex: activeContentIndex });
+  const unit = normalizeUnit({ id: state.currentId, articleTitle: articleTitle.value.trim() || "未命名文章", original: getOriginal(), scenes, gptPreferences: old?.gptPreferences, createdAt: old?.createdAt || stamp, updatedAt: stamp, lastContentIndex: activeContentIndex });
   const index = state.articles.findIndex((item) => item.id === unit.id);
   if (index < 0) state.articles.push(unit); else state.articles[index] = unit;
   saveState(); renderLibrary();
@@ -142,6 +145,56 @@ function closeLibrary(){articleVocabularyId=null;libraryPanel.hidden=true;librar
 function createNewArticle(){state.currentId=uid();fillEditor(null);saveState();closeLibrary();showEditor();}
 function openUnit(id){const unit=state.articles.find(x=>x.id===id);if(!unit)return;state.currentId=id;fillEditor(unit);saveState();closeLibrary();showReader();}
 function parseImport(value){let x;try{x=JSON.parse(value)}catch{throw new Error("JSON 格式无效，请检查引号、逗号和括号。")}if(!isPlainObject(x)||typeof x.articleTitle!=="string"||!x.articleTitle.trim())throw new Error("articleTitle 必须是非空字符串。");if(!isPlainObject(x.original)||!x.original.title?.trim()||!x.original.english?.trim())throw new Error("original 必须包含英文标题 title 和正文 english。");if(!Array.isArray(x.scenes)||x.scenes.length<1||x.scenes.length>5)throw new Error("scenes 必须包含 1～5 篇场景文章。");x.scenes.forEach((s,i)=>{if(!isPlainObject(s)||!s.title?.trim()||!s.english?.trim())throw new Error(`场景${i+1}缺少 title 或 english。`)});return normalizeUnit({...x,id:typeof x.id==="string"?x.id:uid(),createdAt:x.createdAt||now(),updatedAt:now()});}
+
+function currentArticleVocabulary() {
+  const seen = new Set();
+  return Object.values(state.vocabulary).filter(entry => {
+    if (!isEntryInArticle(entry, state.currentId)) return false;
+    const key = `${entry.type}:${normalizeText(entry.text)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+function readGptPreferences() { return { sceneCount:gptSceneCount.value, difficulty:gptDifficulty.value, length:gptLength.value, extra:gptExtra.value }; }
+function saveGptPreferences() {
+  const unit=currentUnit();if(!unit)return;
+  unit.gptPreferences={...DEFAULT_GPT_PREFERENCES,...readGptPreferences()};saveState();
+}
+function buildGptPrompt() {
+  const entries=currentArticleVocabulary();
+  const words=entries.filter(x=>x.type!=="phrase").map(x=>x.text);
+  const phrases=entries.filter(x=>x.type==="phrase").map(x=>x.text);
+  const preferences=readGptPreferences();
+  const noVocabulary=!words.length&&!phrases.length;
+  return [
+    "请按我们约定的英语语境阅读器 JSON 模板生成学习内容。", "",
+    "学习单元标题：", "", articleTitle.value.trim()||"未命名学习单元", "",
+    "原文英文标题：", "", originalTitle.value.trim()||"Untitled Article", "",
+    "英文原文：", "", englishText.value, "",
+    "目标单词：", "", words.length?words.join("\n"):"无", "",
+    "目标短语：", "", phrases.length?phrases.join("\n"):"无", "",
+    ...(noVocabulary?["目标词汇：未指定，请围绕原文生成场景", ""]:[]),
+    "补充要求：", "", `生成${preferences.sceneCount}篇不同场景。`, "",
+    `难度：${preferences.difficulty||DEFAULT_GPT_PREFERENCES.difficulty}`, "",
+    `每篇长度：${preferences.length||DEFAULT_GPT_PREFERENCES.length}`,
+    ...(preferences.extra.trim()?["",preferences.extra]:[]), "",
+    "请完整保留原文，提供原文及场景的中文翻译，并在不同场景中自然复现目标单词和短语。优先使用目标词汇的原始形式，但语法和自然表达优先。", "",
+    "场景 JSON 只使用 articleTitle、original、scenes；original 和每个 scene 包含 title、english、chineseTitle、chinese。词卡资料另列于 JSON 之外，不向场景 JSON 添加 vocabulary 或复习数据字段。"
+  ].join("\n");
+}
+function refreshGptPrompt() {
+  const entries=currentArticleVocabulary();
+  gptVocabularyNotice.textContent=entries.length?`已读取本篇 ${entries.filter(x=>x.type!=="phrase").length} 个单词、${entries.filter(x=>x.type==="phrase").length} 个短语。`:"本篇尚未收藏单词或短语";
+  gptPromptPreview.value=buildGptPrompt();gptCopyStatus.textContent="";gptCopyStatus.className="import-status";
+}
+function openGptCopyPanel(event) {
+  gptCopyTrigger=event?.currentTarget||document.activeElement;
+  const preferences=currentUnit()?.gptPreferences||DEFAULT_GPT_PREFERENCES;
+  gptSceneCount.value=preferences.sceneCount;gptDifficulty.value=preferences.difficulty;gptLength.value=preferences.length;gptExtra.value=preferences.extra;
+  refreshGptPrompt();gptCopyPanel.hidden=false;gptCopyBackdrop.hidden=false;document.body.style.overflow="hidden";gptCopyClose.focus();
+}
+function closeGptCopyPanel(){gptCopyPanel.hidden=true;gptCopyBackdrop.hidden=true;document.body.style.overflow="";if(gptCopyTrigger&&document.contains(gptCopyTrigger))gptCopyTrigger.focus();gptCopyTrigger=null;}
 
 function dataCounts(value=state){const entries=Object.values(value.vocabulary||{});return{articles:(value.articles||[]).length,words:entries.filter(x=>x.type!=="phrase").length,phrases:entries.filter(x=>x.type==="phrase").length,vocabulary:entries.length};}
 function readBackupMeta(){try{const value=JSON.parse(localStorage.getItem(BACKUP_META_KEY));return isPlainObject(value)?value:{}}catch{return{}}}
@@ -236,6 +289,15 @@ articleForm.addEventListener("input",e=>{if(e.target===importText){importStatus.
 articleForm.addEventListener("submit",e=>{e.preventDefault();if(!validateDraft())return;saveCurrent();showReader();});
 importButton.addEventListener("click",()=>{try{let unit=parseImport(importText.value);const duplicate=state.articles.find(x=>x.id===unit.id);if(duplicate){const overwrite=window.confirm("发现相同 id。确定：覆盖现有文章；取消：另存为新文章。");if(!overwrite)unit={...unit,id:uid(),createdAt:now()};}state.currentId=unit.id;const i=state.articles.findIndex(x=>x.id===unit.id);if(i<0)state.articles.push(unit);else state.articles[i]=unit;fillEditor(unit);saveState();renderLibrary();importStatus.textContent=duplicate&&unit.id===duplicate.id?"已覆盖现有文章":"已作为新学习单元导入";importStatus.className="import-status is-success";}catch(error){importStatus.textContent=error.message;importStatus.className="import-status is-error";}});
 clearImportButton.addEventListener("click",()=>{importText.value="";importStatus.textContent="";importText.focus();});
+[editorCopyGptButton,readerCopyGptButton].forEach(button=>button.addEventListener("click",openGptCopyPanel));
+gptCopyClose.addEventListener("click",closeGptCopyPanel);gptCopyBackdrop.addEventListener("click",closeGptCopyPanel);
+[gptSceneCount,gptDifficulty,gptLength,gptExtra].forEach(input=>input.addEventListener("input",()=>{saveGptPreferences();refreshGptPrompt();}));
+gptCopyButton.addEventListener("click",async()=>{
+  refreshGptPrompt();
+  if(!englishText.value.trim()){gptCopyStatus.textContent="请先填写英文原文";gptCopyStatus.className="import-status is-error";englishText.setAttribute("aria-invalid","true");return;}
+  try{if(!globalThis.navigator?.clipboard?.writeText)throw new Error();await globalThis.navigator.clipboard.writeText(gptPromptPreview.value);gptCopyStatus.textContent="已复制，前往 GPT 对话粘贴即可";gptCopyStatus.className="import-status is-success";}
+  catch{gptPromptPreview.select?.();gptPromptPreview.focus();gptCopyStatus.textContent="复制失败，请在预览框中手动选择并复制完整文本";gptCopyStatus.className="import-status is-error";}
+});
 translationToggle.addEventListener("click",()=>{const open=translationToggle.getAttribute("aria-expanded")==="false";translationToggle.setAttribute("aria-expanded",String(open));translationToggleText.textContent=open?"收起全文翻译":"展开全文翻译";readerTranslation.hidden=!open;});
 backButton.addEventListener("click",showEditor);
 [libraryButton,editorLibraryButton,readerLibraryButton].forEach(button=>button.addEventListener("click",openLibrary));libraryClose.addEventListener("click",closeLibrary);libraryBackdrop.addEventListener("click",closeLibrary);saveArticleButton.addEventListener("click",()=>saveCurrent(true));
@@ -253,6 +315,6 @@ articleVocabularyFilters.addEventListener("click",e=>{const button=e.target.clos
 articleVocabularyItems.addEventListener("click",e=>{const remove=e.target.closest("button[data-action]");if(remove?.dataset.action==="remove-vocabulary"){const entry=state.vocabulary[remove.dataset.key];if(!entry||!window.confirm(`确定从本篇移除“${entry.text}”吗？这不会从总词汇表删除。`))return;entry.sources=(entry.sources||[]).filter(item=>item.articleId!==articleVocabularyId);if(!entryArticleIds(entry).length&&window.confirm("该词汇已没有任何文章来源。是否从总词汇表彻底删除？取消将默认保留。"))delete state.vocabulary[remove.dataset.key];saveState();renderArticleVocabulary();renderLibrary();renderVocabulary();return;}const item=e.target.closest(".vocabulary-item");if(item)openCard(item.dataset.key,item);});
 libraryItems.addEventListener("click",e=>{const b=e.target.closest("button[data-action]");if(!b)return;const unit=state.articles.find(x=>x.id===b.dataset.id);if(!unit)return;if(b.dataset.action==="open")openUnit(unit.id);if(b.dataset.action==="vocabulary")openArticleVocabulary(unit.id);if(b.dataset.action==="rename"){const name=window.prompt("输入新的学习单元标题",unit.articleTitle);if(name?.trim()){unit.articleTitle=name.trim();unit.updatedAt=now();if(unit.id===state.currentId)articleTitle.value=unit.articleTitle;saveState();renderLibrary();}}if(b.dataset.action==="delete"){if(!window.confirm(`确定删除“${unit.articleTitle}”吗？文章关联会解除，但词汇默认保留。`))return;const exclusive=Object.entries(state.vocabulary).filter(([,entry])=>isEntryInArticle(entry,unit.id)&&entryArticleIds(entry).length===1);const deleteExclusive=exclusive.length&&window.confirm(`有 ${exclusive.length} 个词汇只来源于此文章。是否一并从总词汇表删除？取消将默认保留为“未归属文章”。`);Object.entries(state.vocabulary).forEach(([key,entry])=>{if(deleteExclusive&&exclusive.some(([exclusiveKey])=>exclusiveKey===key)){delete state.vocabulary[key];return;}entry.sources=(entry.sources||[]).filter(item=>item.articleId!==unit.id);});state.articles=state.articles.filter(x=>x.id!==unit.id);if(state.currentId===unit.id){state.currentId=state.articles[0]?.id||null;fillEditor(currentUnit());}saveState();renderLibrary();renderVocabulary();}});
 window.addEventListener?.("scroll",()=>{const unit=currentUnit();if(!readerView.hidden&&unit){unit.lastScrollY=window.scrollY||0;saveState();}},{passive:true});
-document.addEventListener("keydown",e=>{if(!reviewPanel.hidden){if((e.key==="Enter"||e.key===" ")&&!reviewRevealed){e.preventDefault();revealReviewAnswer();return}if(e.key==="ArrowLeft"){e.preventDefault();goReview(-1);return}if(e.key==="ArrowRight"){e.preventDefault();goReview(1);return}}if(e.key==="Escape"){if(!reviewPanel.hidden)closeReview();else if(!wordCard.hidden)closeCard();else if(!libraryPanel.hidden)closeLibrary();else if(!dataPanel.hidden)closeDataPanel();else if(phraseMode)setPhraseMode(false);}});
+document.addEventListener("keydown",e=>{if(!reviewPanel.hidden){if((e.key==="Enter"||e.key===" ")&&!reviewRevealed){e.preventDefault();revealReviewAnswer();return}if(e.key==="ArrowLeft"){e.preventDefault();goReview(-1);return}if(e.key==="ArrowRight"){e.preventDefault();goReview(1);return}}if(e.key==="Escape"){if(!gptCopyPanel.hidden)closeGptCopyPanel();else if(!reviewPanel.hidden)closeReview();else if(!wordCard.hidden)closeCard();else if(!libraryPanel.hidden)closeLibrary();else if(!dataPanel.hidden)closeDataPanel();else if(phraseMode)setPhraseMode(false);}});
 
 migrateLegacy();fillEditor(currentUnit());renderLibrary();renderVocabulary();
